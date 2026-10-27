@@ -6,6 +6,14 @@ Parallels Desktop의 Coherence 모드처럼, 다른 곳에 있는 Windows PC의 
 
 > 개인 프로젝트이며 Microsoft, Parallels와 관련이 없습니다.
 
+## 스크린샷
+
+| Dock 아이콘으로 여는 시작 메뉴 | 맥 창으로 뜬 원격 메모장 | 원격 계산기 |
+|:---:|:---:|:---:|
+| <img src="docs/images/start-menu.png" width="320" alt="Windows 11 모양 시작 메뉴"> | <img src="docs/images/notepad.png" width="420" alt="원격 메모장 창"> | <img src="docs/images/calculator.png" width="160" alt="원격 계산기 창"> |
+
+시작 메뉴는 Pstsc가 맥에서 그리는 창이고, 메모장과 계산기는 원격 Windows PC에서 실행 중인 프로그램입니다. 각각 맥의 독립된 창으로 뜹니다.
+
 ## 주요 기능
 
 **창과 화면**
@@ -227,6 +235,7 @@ swift build && swift run PstscAgent
 | `scripts/build-app.sh` | `Pstsc.app` 빌드·설치 |
 | `scripts/test-remoteapp.sh` | xfreerdp로 RemoteApp 동작만 따로 확인하는 스크립트 |
 | `remote/` | 원격 PC에 적용하는 레지스트리 파일, 테스트용 `.rdp` |
+| `docs/images/` | README 스크린샷 |
 | `PLAN.md`, `PROGRESS.md` | 설계와 개발 기록 |
 
 ## 라이선스

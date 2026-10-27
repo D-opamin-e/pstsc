@@ -1,0 +1,6 @@
+# SwiftPM build output
+.build/
+.swiftpm/
+# scripts/build-app.sh output
+build/
+.DS_Store

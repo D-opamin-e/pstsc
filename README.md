@@ -2,6 +2,10 @@
 
 **원격 Windows PC의 프로그램을 맥 앱처럼 쓰는 macOS용 RemoteApp 클라이언트**
 
+![MacBook Air 맥 바탕화면 위에 원격 Windows PC의 3DMark 창만 떠 있는 화면](docs/images/hero.webp)
+
+*MacBook Air(M2, 메모리 8GB) 위에서, Ryzen 7 7800X3D와 RX 6900 XT를 단 원격 Windows PC의 3DMark를 창 하나로 실행한 모습입니다. Windows 바탕화면 없이 프로그램 창만 맥 창으로 뜨고, Dock에는 Pstsc(Windows 아이콘)와 3DMark 아이콘이 따로 생깁니다.*
+
 Parallels Desktop의 Coherence 모드처럼, 다른 곳에 있는 Windows PC의 프로그램을 하나씩 불러와 맥에서 독립된 창으로 띄웁니다. 프로그램마다 Dock 아이콘이 생기고, Windows 11 모양의 시작 메뉴와 Spotlight·Launchpad 실행을 지원합니다. Windows를 맥 안에 설치하는 대신, 이미 있는 Windows PC에 원격 데스크톱(RDP)으로 접속하는 방식입니다.
 
 > 개인 프로젝트이며 Microsoft, Parallels와 관련이 없습니다.

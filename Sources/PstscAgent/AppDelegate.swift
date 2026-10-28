@@ -24,6 +24,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, RDPSessionDelegate, NS
     private var rememberOnSuccess = false
     /// Whether these credentials ever got a working session; only then do we reconnect on our own.
     private var hasBeenReady = false
+    /// Consecutive connections that logged off before the RemoteApp session ever became ready.
+    /// Two in a row means the remote PC isn't set up for RemoteApp, not a transient drop.
+    private var earlyLogoffs = 0
     private var reconnectAttempts = 0
     /// Set when the user signs out of / shuts down the remote PC from the power menu: no auto-reconnect.
     private var userEndedRemoteSession = false
@@ -56,6 +59,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, RDPSessionDelegate, NS
             self.credentials = credentials
             self.rememberOnSuccess = remember
             self.hasBeenReady = false
+            self.earlyLogoffs = 0
             if !remember {
                 CredentialStore.forget(host: credentials.host, user: credentials.username)
             }
@@ -460,6 +464,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, RDPSessionDelegate, NS
         guard session === self.session else { return }
         ready = true
         hasBeenReady = true
+        earlyLogoffs = 0
         stopReconnecting()
         if rememberOnSuccess, let credentials {
             CredentialStore.remember(credentials)
@@ -478,16 +483,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate, RDPSessionDelegate, NS
         tearDownSession()
         FileHandle.standardError.write(Data("[pstsc] disconnected: \(reason) \(message ?? "")\n".utf8))
 
+        // A logoff before this connection ever became ready (not reset by a successful ready) means
+        // the RemoteApp session can't start. Twice in a row = the remote PC isn't set up for
+        // RemoteApp (enable-remoteapp.reg not applied, or applied without a restart); stop looping.
+        if reason == .loggedOff && !ready && mode == .apps && !userEndedRemoteSession {
+            earlyLogoffs += 1
+            if earlyLogoffs >= 2 {
+                earlyLogoffs = 0
+                stopReconnecting()
+                pendingLaunch = nil
+                connectWindow.setBusy(false, status: L("이 원격 PC는 아직 Pstsc 연결 준비가 되어 있지 않습니다. 저장소의 enable-remoteapp.reg를 원격 PC에서 실행하고 재시작한 뒤 다시 연결하세요."))
+                connectWindow.showWindow(nil)
+                NSApp.activate()
+                return
+            }
+        }
+
         switch reason {
-        case .loggedOff where !hasBeenReady && mode == .apps:
-            // Logged off before the RemoteApp session ever started: the remote PC isn't set up for
-            // RemoteApp (enable-remoteapp.reg not applied, or applied without a restart). Looping
-            // would just repeat this, so stop and say so.
-            stopReconnecting()
-            connectWindow.setBusy(false, status: L("이 원격 PC는 아직 Pstsc 연결 준비가 되어 있지 않습니다. 저장소의 enable-remoteapp.reg를 원격 PC에서 실행하고 재시작한 뒤 다시 연결하세요."))
-            connectWindow.showWindow(nil)
-            NSApp.activate()
-            return
         case .loggedOff where credentials != nil && !userEndedRemoteSession:
             // Windows ended the remote session (e.g. timed out): start a fresh one quietly.
             scheduleReconnect()

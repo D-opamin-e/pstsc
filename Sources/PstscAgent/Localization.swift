@@ -106,9 +106,19 @@ private enum Translations {
             "You won't be able to connect until it is turned on again.",
             "再び電源を入れるまで、リモート PC に接続できなくなります。"),
         "프로그램을 실행하지 못했습니다": ("Couldn't start the program", "プログラムを起動できませんでした"),
-        "%@\n오류 코드: %d\n원격 PC에서 RemoteApp 허용 설정과 프로그램 경로를 확인하세요.": (
-            "%@\nError code: %d\nCheck the RemoteApp setting on the remote PC and the program path.",
-            "%@\nエラーコード: %d\nリモート PC の RemoteApp の許可設定とプログラムのパスを確認してください。"),
+        "%@\n오류 코드: %d\n%@": ("%@\nError code: %d\n%@", "%@\nエラーコード: %d\n%@"),
+        "이 원격 PC는 아직 Pstsc 연결 준비가 되어 있지 않습니다. 저장소의 enable-remoteapp.reg를 원격 PC에서 실행하고 재시작한 뒤 다시 연결하세요.": (
+            "This remote PC isn't set up for Pstsc yet. Run enable-remoteapp.reg from the repository on the remote PC, restart it, then connect again.",
+            "このリモート PC はまだ Pstsc 接続の準備ができていません。リポジトリの enable-remoteapp.reg をリモート PC で実行し、再起動してから再接続してください。"),
+        "원격 PC에서 RemoteApp이 허용되어 있지 않습니다. enable-remoteapp.reg를 적용하세요.": (
+            "RemoteApp isn't allowed on the remote PC. Apply enable-remoteapp.reg.",
+            "リモート PC で RemoteApp が許可されていません。enable-remoteapp.reg を適用してください。"),
+        "원격 PC에서 그 경로의 프로그램을 찾지 못했습니다.": (
+            "The program wasn't found at that path on the remote PC.",
+            "リモート PC のそのパスにプログラムが見つかりませんでした。"),
+        "원격 PC에서 RemoteApp 허용 설정과 프로그램 경로를 확인하세요.": (
+            "Check the RemoteApp setting on the remote PC and the program path.",
+            "リモート PC の RemoteApp の許可設定とプログラムのパスを確認してください。"),
         "로그인 항목을 바꾸지 못했습니다": ("Couldn't change the login item", "ログイン項目を変更できませんでした"),
         "응용 프로그램 폴더의 Pstsc.app으로 실행했을 때만 설정할 수 있습니다.\n%@": (
             "This only works when Pstsc runs as Pstsc.app from the Applications folder.\n%@",

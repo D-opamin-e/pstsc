@@ -524,9 +524,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate, RDPSessionDelegate, NS
 
     func session(_ session: RDPSession, failedToLaunch program: String, code: UInt16) {
         guard session === self.session else { return }
+
+        // The helper (conhost.exe) failing means the remote PC isn't set up for RemoteApp; a
+        // user-launched program failing is usually a bad path. Code 3 = not in the allow list.
+        let isHelper = program.lowercased().contains("conhost.exe")
+        if isHelper {
+            tearDownSession()
+            connectWindow.setBusy(false, status: L("이 원격 PC는 아직 Pstsc 연결 준비가 되어 있지 않습니다. 저장소의 enable-remoteapp.reg를 원격 PC에서 실행하고 재시작한 뒤 다시 연결하세요."))
+            connectWindow.showWindow(nil)
+            NSApp.activate()
+            return
+        }
+
+        let reason: String
+        switch code {
+        case 3: reason = L("원격 PC에서 RemoteApp이 허용되어 있지 않습니다. enable-remoteapp.reg를 적용하세요.")
+        case 5: reason = L("원격 PC에서 그 경로의 프로그램을 찾지 못했습니다.")
+        default: reason = L("원격 PC에서 RemoteApp 허용 설정과 프로그램 경로를 확인하세요.")
+        }
         let alert = NSAlert()
         alert.messageText = L("프로그램을 실행하지 못했습니다")
-        alert.informativeText = L("%@\n오류 코드: %d\n원격 PC에서 RemoteApp 허용 설정과 프로그램 경로를 확인하세요.", program, Int32(code))
+        alert.informativeText = L("%@\n오류 코드: %d\n%@", program, Int32(code), reason)
         alert.runModal()
     }
 

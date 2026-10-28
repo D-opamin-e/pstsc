@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 
 /// A Start menu entry on the remote PC. appID is its AppUserModelID, launchable via shell:AppsFolder.
@@ -22,17 +23,41 @@ final class AppCatalog {
         .appendingPathComponent("Pstsc", isDirectory: true)
     static let sharedFolder = supportFolder.appendingPathComponent("share", isDirectory: true)
     private static let exportFile = sharedFolder.appendingPathComponent("apps.json")
-    private static let cacheFile = supportFolder.appendingPathComponent("apps.json")
+    private static let cacheFolder = supportFolder.appendingPathComponent("catalog", isDirectory: true)
 
+    /// The remote PC this catalog's apps belong to. The app list is cached per host so that
+    /// connecting to a different PC never shows the previous PC's programs.
+    private var host = ""
     private var pollTimer: Timer?
     private var iconTimer: Timer?
 
     init() {
         try? FileManager.default.createDirectory(at: Self.sharedFolder, withIntermediateDirectories: true)
-        if let data = try? Data(contentsOf: Self.cacheFile),
+        try? FileManager.default.createDirectory(at: Self.cacheFolder, withIntermediateDirectories: true)
+    }
+
+    /// A per-host cache file, keyed by a hash of the host so any address is a safe file name.
+    private static func cacheFile(for host: String) -> URL {
+        let key = Insecure.MD5.hash(data: Data(host.lowercased().utf8)).map { String(format: "%02x", $0) }.joined()
+        return cacheFolder.appendingPathComponent("\(key).json")
+    }
+
+    /// Call before each connection. Switches to the given PC: shows that PC's cached apps (or none)
+    /// and removes the previous PC's export so a stale file is never mistaken for this PC's list.
+    func beginConnection(host: String) {
+        self.host = host
+        pollTimer?.invalidate()
+        iconTimer?.invalidate()
+        if let data = try? Data(contentsOf: Self.cacheFile(for: host)),
            let cached = try? JSONDecoder().decode([RemoteApp].self, from: data) {
             apps = cached
+        } else {
+            apps = []
         }
+        // Drop the previous connection's export; this PC's helper writes a fresh one.
+        try? FileManager.default.removeItem(at: Self.exportFile)
+        try? FileManager.default.removeItem(at: Self.sharedFolder.appendingPathComponent("icons.done"))
+        onChange?()
     }
 
     // MARK: Remote helper
@@ -282,7 +307,7 @@ final class AppCatalog {
         }
         apps = Array(Set(loaded)).sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
         if let cache = try? JSONEncoder().encode(apps) {
-            try? cache.write(to: Self.cacheFile)
+            try? cache.write(to: Self.cacheFile(for: host))
         }
         FileHandle.standardError.write(Data("[pstsc] loaded \(apps.count) remote apps\n".utf8))
         onChange?()

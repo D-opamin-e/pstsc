@@ -327,6 +327,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, RDPSessionDelegate, NS
     private func connect(mode newMode: Mode) {
         guard let credentials, let screen = NSScreen.screens.first else { return }
         tearDownSession()
+        // Switch the Start menu to this PC: show its cached apps (or none), never the last PC's.
+        catalog.beginConnection(host: credentials.host)
         mode = newMode
         ready = false
 

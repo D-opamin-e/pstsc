@@ -4,6 +4,8 @@
 
 > Run apps from a remote Windows PC as seamless Mac windows (RDP RemoteApp, Parallels Coherence style). **[Read in English →](README.en.md)**
 
+앱 화면은 맥의 언어 설정에 따라 **한국어·영어·일본어**로 표시됩니다(그 밖의 언어는 영어).
+
 **원격 Windows PC의 프로그램을 맥 앱처럼 쓰는 macOS용 RemoteApp 클라이언트**
 
 ![MacBook Air 맥 바탕화면 위에 원격 Windows PC의 3DMark 창만 떠 있는 화면](docs/images/hero.webp)
@@ -93,7 +95,7 @@ cd pstsc
 scripts/build-app.sh
 ```
 
-마지막에 `설치됨: /Applications/Pstsc.app`이 나오면 성공입니다. 이 스크립트는 릴리스 빌드를 한 뒤 아이콘이 들어 있는 `Pstsc.app`을 만들어 응용 프로그램 폴더에 넣습니다.
+마지막에 `설치됨 / Installed / インストール完了: /Applications/Pstsc.app`이 나오면 성공입니다. 이 스크립트는 릴리스 빌드를 한 뒤 아이콘이 들어 있는 `Pstsc.app`을 만들어 응용 프로그램 폴더에 넣습니다.
 
 ### 5. 실행
 
@@ -229,6 +231,7 @@ swift build && swift run PstscAgent
 ## 문제 해결
 
 - **연결이 계속 끊기고 다시 붙는다**: 다른 기기(예: Windows App)가 같은 계정으로 접속해 있으면 세션을 서로 빼앗습니다. 한쪽만 쓰세요.
+- **"원격 PC에 다른 사용자가 로그인되어 있습니다"가 나온다**: Windows Pro는 동시에 한 사용자만 로그인할 수 있습니다. 원격 PC에서 다른 계정을 로그아웃하거나(잠금이 아니라 로그아웃), 원격 PC 화면에 뜨는 확인 창에서 연결을 허용하세요.
 - **"already running"이 나오고 바로 종료된다**: Pstsc가 이미 실행 중입니다. Pstsc는 한 번에 하나만 실행됩니다.
 - **프로그램이 실행되지 않는다**: 원격 PC에 `enable-remoteapp.reg`를 적용했는지 확인하세요.
 - **그 밖의 문제**: `~/Library/Logs/Pstsc/agent.log`를 확인하세요. 개인정보가 남지 않도록 연결 상태와 오류만 기록합니다. 창 제목, 실행한 앱, 원격 PC 주소, 계정은 남기지 않습니다. FreeRDP 자체 로그는 원격 PC 이름과 계정을 포함하므로 기본으로 꺼져 있습니다. 디버깅할 때만 `WLOG_LEVEL=INFO swift run PstscAgent`처럼 켜고, 그 로그는 공개된 곳에 올리지 마세요.

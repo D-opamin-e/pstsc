@@ -30,9 +30,9 @@ final class StartMenuController: NSWindowController, NSTextFieldDelegate, NSTabl
     private let pinnedGrid = NSGridView()
     private let recentGrid = NSGridView()
     private let recentEmptyLabel = NSTextField(wrappingLabelWithString:
-        "최근에 실행한 앱이 여기에 표시됩니다. 고정하려면 앱을 우클릭하세요.")
+        L("최근에 실행한 앱이 여기에 표시됩니다. 고정하려면 앱을 우클릭하세요."))
     private let listView = NSStackView()
-    private let listTitle = NSTextField(labelWithString: "모든 앱")
+    private let listTitle = NSTextField(labelWithString: L("모든 앱"))
     private let backButton = NSButton()
     private let table = NSTableView()
     private let userLabel = NSTextField(labelWithString: "")
@@ -172,7 +172,7 @@ final class StartMenuController: NSWindowController, NSTextFieldDelegate, NSTabl
         searchField.font = .systemFont(ofSize: 13)
         searchField.textColor = .white
         searchField.placeholderAttributedString = NSAttributedString(
-            string: "앱, 설정 및 문서 검색",
+            string: L("앱, 설정 및 문서 검색"),
             attributes: [.foregroundColor: NSColor(white: 1, alpha: 0.5), .font: NSFont.systemFont(ofSize: 13)])
         searchField.delegate = self
 
@@ -192,13 +192,13 @@ final class StartMenuController: NSWindowController, NSTextFieldDelegate, NSTabl
     }
 
     private func buildHome() {
-        let allButton = Self.pillButton(title: "모두  ›", target: self, action: #selector(showAll))
-        let pinnedHeader = Self.sectionHeader("고정됨", accessory: allButton)
+        let allButton = Self.pillButton(title: L("모두  ›"), target: self, action: #selector(showAll))
+        let pinnedHeader = Self.sectionHeader(L("고정됨"), accessory: allButton)
 
         pinnedGrid.rowSpacing = 4
         pinnedGrid.columnSpacing = 4
 
-        let recentHeader = Self.sectionHeader("맞춤", accessory: nil)
+        let recentHeader = Self.sectionHeader(L("맞춤"), accessory: nil)
         recentGrid.rowSpacing = 4
         recentGrid.columnSpacing = 8
         recentEmptyLabel.textColor = NSColor(white: 1, alpha: 0.75)
@@ -221,7 +221,7 @@ final class StartMenuController: NSWindowController, NSTextFieldDelegate, NSTabl
     private func buildList() {
         listTitle.font = .boldSystemFont(ofSize: 14)
         listTitle.textColor = .white
-        backButton.title = "‹  뒤로"
+        backButton.title = L("‹  뒤로")
         Self.stylePill(backButton, target: self, action: #selector(showHome))
         let header = Self.row(listTitle, accessory: backButton)
 
@@ -262,7 +262,7 @@ final class StartMenuController: NSWindowController, NSTextFieldDelegate, NSTabl
         userLabel.textColor = .white
         userLabel.font = .systemFont(ofSize: 12)
 
-        let power = NSButton(image: NSImage(systemSymbolName: "power", accessibilityDescription: "전원")!,
+        let power = NSButton(image: NSImage(systemSymbolName: "power", accessibilityDescription: L("전원"))!,
                              target: self, action: #selector(showPowerMenu(_:)))
         power.isBordered = false
         power.contentTintColor = .white
@@ -295,12 +295,12 @@ final class StartMenuController: NSWindowController, NSTextFieldDelegate, NSTabl
         case .home:
             fillHome()
         case .all:
-            listTitle.stringValue = "모든 앱"
+            listTitle.stringValue = L("모든 앱")
             backButton.isHidden = false
             rows = Self.grouped(catalog.apps)
             reloadTable()
         case .search:
-            listTitle.stringValue = "검색 결과"
+            listTitle.stringValue = L("검색 결과")
             backButton.isHidden = true
             let query = searchField.stringValue.trimmingCharacters(in: .whitespaces)
             let matches = catalog.apps.filter { $0.name.localizedCaseInsensitiveContains(query) }
@@ -310,7 +310,7 @@ final class StartMenuController: NSWindowController, NSTextFieldDelegate, NSTabl
                 let b = $1.name.trimmed.lowercased().hasPrefix(query.lowercased())
                 return a != b ? a : $0.name.localizedStandardCompare($1.name) == .orderedAscending
             }
-            rows = ranked.isEmpty ? [.header("'\(query)'에 대한 결과가 없습니다")] : ranked.map { .app($0) }
+            rows = ranked.isEmpty ? [.header(L("'%@'에 대한 결과가 없습니다", query))] : ranked.map { .app($0) }
             reloadTable()
         }
     }
@@ -328,8 +328,8 @@ final class StartMenuController: NSWindowController, NSTextFieldDelegate, NSTabl
         let pinned = prefs.pinned(in: catalog.apps)
         if pinned.isEmpty {
             let label = NSTextField(wrappingLabelWithString: catalog.apps.isEmpty
-                ? "원격 PC에서 앱 목록을 받아오는 중입니다…"
-                : "고정된 앱이 없습니다. '모두'에서 앱을 우클릭해 고정하세요.")
+                ? L("원격 PC에서 앱 목록을 받아오는 중입니다…")
+                : L("고정된 앱이 없습니다. '모두'에서 앱을 우클릭해 고정하세요."))
             label.textColor = NSColor(white: 1, alpha: 0.75)
             pinnedGrid.addRow(with: [label])
         }
@@ -374,7 +374,7 @@ final class StartMenuController: NSWindowController, NSTextFieldDelegate, NSTabl
     private func contextMenu(for app: RemoteApp) -> NSMenu {
         let menu = NSMenu()
         let pinned = prefs.isPinned(app, in: catalog.apps)
-        let item = NSMenuItem(title: pinned ? "시작 화면에서 고정 해제" : "시작 화면에 고정",
+        let item = NSMenuItem(title: pinned ? L("시작 화면에서 고정 해제") : L("시작 화면에 고정"),
                               action: #selector(togglePin(_:)), keyEquivalent: "")
         item.target = self
         item.representedObject = app
@@ -404,12 +404,12 @@ final class StartMenuController: NSWindowController, NSTextFieldDelegate, NSTabl
             item.representedObject = action
             menu.addItem(item)
         }
-        add(isDesktopMode ? "앱 창 모드로 돌아가기" : "Windows 데스크톱 보기", .toggleDesktop)
+        add(isDesktopMode ? L("앱 창 모드로 돌아가기") : L("Windows 데스크톱 보기"), .toggleDesktop)
         menu.addItem(.separator())
-        add("연결 끊기", .disconnect)
-        add("원격 PC 로그아웃…", .signOut)
-        add("원격 PC 다시 시작…", .restart)
-        add("원격 PC 시스템 종료…", .shutDown)
+        add(L("연결 끊기"), .disconnect)
+        add(L("원격 PC 로그아웃…"), .signOut)
+        add(L("원격 PC 다시 시작…"), .restart)
+        add(L("원격 PC 시스템 종료…"), .shutDown)
         menu.popUp(positioning: nil, at: NSPoint(x: 0, y: sender.bounds.height + 4), in: sender)
     }
 

@@ -18,6 +18,9 @@ typedef enum
 	PSTSC_STATE_FAILED = 3,
 	/* RemoteApp mode only: the first program was launched, pstsc_exec may be used now. */
 	PSTSC_STATE_READY = 4,
+	/* Windows Pro allows one signed-in user: another user is signed in on the remote PC and is
+	 * being asked there whether to let us take over. Logon fails after about 30 s if nobody answers. */
+	PSTSC_STATE_OTHER_USER_SIGNED_IN = 5,
 } PstscState;
 
 /* Merged state of one RemoteApp window. Coordinates are remote desktop pixels. */

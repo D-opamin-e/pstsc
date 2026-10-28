@@ -15,8 +15,8 @@ final class ConnectWindowController: NSWindowController {
     private let userField = NSTextField()
     private let passwordField = NSSecureTextField()
     private let statusLabel = NSTextField(labelWithString: "")
-    private let connectButton = NSButton(title: "연결", target: nil, action: nil)
-    private let rememberBox = NSButton(checkboxWithTitle: "비밀번호를 키체인에 저장하고 다음부터 자동 연결", target: nil, action: nil)
+    private let connectButton = NSButton(title: L("연결"), target: nil, action: nil)
+    private let rememberBox = NSButton(checkboxWithTitle: L("비밀번호를 키체인에 저장하고 다음부터 자동 연결"), target: nil, action: nil)
 
     private enum Key {
         static let host = "host"
@@ -26,14 +26,14 @@ final class ConnectWindowController: NSWindowController {
     init() {
         let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 460, height: 230),
                               styleMask: [.titled, .closable], backing: .buffered, defer: false)
-        window.title = "Pstsc — 원격 PC 연결"
+        window.title = L("Pstsc — 원격 PC 연결")
         super.init(window: window)
 
         let defaults = UserDefaults.standard
         hostField.stringValue = defaults.string(forKey: Key.host) ?? ""
         userField.stringValue = defaults.string(forKey: Key.user) ?? ""
-        hostField.placeholderString = "192.168.0.10 또는 pc.example.com"
-        userField.placeholderString = "사용자 이름 또는 MicrosoftAccount\\메일주소"
+        hostField.placeholderString = L("192.168.0.10 또는 pc.example.com")
+        userField.placeholderString = L("사용자 이름 또는 MicrosoftAccount\\메일주소")
 
         statusLabel.textColor = .secondaryLabelColor
         statusLabel.lineBreakMode = .byWordWrapping
@@ -45,9 +45,9 @@ final class ConnectWindowController: NSWindowController {
         connectButton.bezelStyle = .push
 
         let grid = NSGridView(views: [
-            [NSTextField(labelWithString: "원격 PC 주소"), hostField],
-            [NSTextField(labelWithString: "사용자"), userField],
-            [NSTextField(labelWithString: "비밀번호"), passwordField],
+            [NSTextField(labelWithString: L("원격 PC 주소")), hostField],
+            [NSTextField(labelWithString: L("사용자")), userField],
+            [NSTextField(labelWithString: L("비밀번호")), passwordField],
             [NSGridCell.emptyContentView, rememberBox],
         ])
         rememberBox.state = .on
@@ -93,7 +93,7 @@ final class ConnectWindowController: NSWindowController {
         let host = hostField.stringValue.trimmingCharacters(in: .whitespaces)
         let user = userField.stringValue.trimmingCharacters(in: .whitespaces)
         guard !host.isEmpty, !user.isEmpty, !passwordField.stringValue.isEmpty else {
-            setBusy(false, status: "주소, 사용자, 비밀번호를 모두 입력하세요.")
+            setBusy(false, status: L("주소, 사용자, 비밀번호를 모두 입력하세요."))
             return
         }
 
@@ -103,7 +103,7 @@ final class ConnectWindowController: NSWindowController {
 
         let credentials = Credentials(host: host, username: user, password: passwordField.stringValue)
         passwordField.stringValue = ""
-        setBusy(true, status: "연결 중…")
+        setBusy(true, status: L("연결 중…"))
         onConnect?(credentials, rememberBox.state == .on)
     }
 }

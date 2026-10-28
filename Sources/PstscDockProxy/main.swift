@@ -40,7 +40,7 @@ final class ProxyDelegate: NSObject, NSApplicationDelegate {
     func applicationDockMenu(_ sender: NSApplication) -> NSMenu? {
         let menu = NSMenu()
         for window in windows {
-            let item = NSMenuItem(title: window.title.isEmpty ? "(제목 없음)" : window.title,
+            let item = NSMenuItem(title: window.title.isEmpty ? untitledLabel : window.title,
                                   action: #selector(focusWindow(_:)), keyEquivalent: "")
             item.target = self
             item.tag = window.id
@@ -100,6 +100,16 @@ final class ProxyDelegate: NSObject, NSApplicationDelegate {
         NSApp.terminate(nil)
     }
 }
+
+/// "(Untitled)" in the Mac's language (Korean, Japanese, else English), like the main app.
+let untitledLabel: String = {
+    for identifier in Locale.preferredLanguages {
+        if identifier.hasPrefix("ko") { return "(제목 없음)" }
+        if identifier.hasPrefix("ja") { return "(タイトルなし)" }
+        if identifier.hasPrefix("en") { return "(Untitled)" }
+    }
+    return "(Untitled)"
+}()
 
 /// Launcher mode (bundles in ~/Applications/Pstsc 앱, made for Launchpad/Spotlight): ask Pstsc to
 /// start the remote app, opening Pstsc first if it is not running, then quit right away.

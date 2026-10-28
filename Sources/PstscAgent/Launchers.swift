@@ -14,8 +14,9 @@ final class LauncherController {
     private var syncAgain = false
 
     /// Uninstallers, help files and web links would only clutter Launchpad.
-    private static let skippedWords = ["uninstall", "제거", "help", "도움말", "readme", "web site", "website",
-                                       "웹 사이트", "홈페이지", "documentation", "license"]
+    private static let skippedWords = ["uninstall", "제거", "アンインストール", "help", "도움말", "ヘルプ",
+                                       "readme", "web site", "website", "웹 사이트", "홈페이지", "ホームページ",
+                                       "documentation", "license"]
 
     /// Creates missing launchers, refreshes their icons and removes ones whose app is gone.
     /// Runs in the background; calls made while a sync is running are folded into one more pass.

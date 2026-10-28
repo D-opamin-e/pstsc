@@ -766,6 +766,15 @@ static DWORD on_verify_changed_certificate(freerdp* instance, const char* host, 
 	return 0;
 }
 
+static int on_logon_error_info(freerdp* instance, UINT32 data, UINT32 type)
+{
+	(void)type;
+	PstscClient* client = client_from(instance->context);
+	if (client && data == LOGON_MSG_BUMP_OPTIONS)
+		notify_state(client, PSTSC_STATE_OTHER_USER_SIGNED_IN, 0, NULL);
+	return 1;
+}
+
 static BOOL on_client_new(freerdp* instance, rdpContext* context)
 {
 	(void)context;
@@ -776,6 +785,7 @@ static BOOL on_client_new(freerdp* instance, rdpContext* context)
 	instance->VerifyCertificateEx = on_verify_certificate;
 	instance->VerifyChangedCertificateEx = on_verify_changed_certificate;
 	instance->GetAccessToken = client_failsafe_get_access_token;
+	instance->LogonErrorInfo = on_logon_error_info;
 	return TRUE;
 }
 

@@ -12,7 +12,7 @@ Pstsc brings the programs of a Windows PC you already own onto your Mac, one win
 
 > A personal project. Not affiliated with Microsoft or Parallels.
 
-> **Note:** the app's interface (menus, dialogs) is currently **Korean only**. This page gives the English meaning next to each Korean label.
+> The app's interface follows your Mac's language: **English, Korean or Japanese** (other languages fall back to English).
 
 ## Screenshots
 
@@ -45,7 +45,7 @@ The Start menu is drawn by Pstsc on the Mac; Notepad and Calculator are running 
 - Your Mac home folder appears in the remote File Explorer as a `Mac` drive for exchanging files.
 - Balloon notifications from remote tray icons appear in the Mac Notification Center.
 - Keyboard: left ⌘ is sent as Ctrl, so ⌘C and ⌘V work as on a Mac. Right ⌘ sends the Korean/Japanese IME toggle key (scan code 0x72: Hangul on Korean Windows, Kana on Japanese Windows).
-- The "원격 PC 리소스 사용량" (remote PC resource usage) menu item measures how much CPU and memory this connection uses on the remote PC.
+- The **Remote PC Resource Usage** menu item measures how much CPU and memory this connection uses on the remote PC.
 
 ## Requirements
 
@@ -93,7 +93,7 @@ cd pstsc
 scripts/build-app.sh
 ```
 
-It succeeded when the last line reads `설치됨: /Applications/Pstsc.app` ("installed"). The script makes a release build, packages `Pstsc.app` with its icon and puts it in your Applications folder.
+It succeeded when the last line reads `설치됨 / Installed / インストール完了: /Applications/Pstsc.app`. The script makes a release build, packages `Pstsc.app` with its icon and puts it in your Applications folder.
 
 ### 5. Run
 
@@ -155,13 +155,13 @@ After installing on the Mac, set up the Windows PC you will connect to, once:
 
 1. Start Pstsc and enter the remote PC's address, user name and password. For a Microsoft account, use `MicrosoftAccount\your@email` as the user name and the account password (not the PIN).
 2. Once connected, click the Pstsc Dock icon and launch programs from the Start menu.
-3. To see the whole remote desktop, choose the Start menu's power button → **Windows 데스크톱 보기** ("Show Windows desktop").
+3. To see the whole remote desktop, choose the Start menu's power button → **Show Windows Desktop**.
 
 | To | Do |
 |---|---|
 | Launch a program | Pstsc Dock icon → Start menu, or search its name in Spotlight |
 | Pin or unpin an app | Right-click it in the Start menu |
-| List remote windows | Menu bar **창** ("Window") menu, or right-click a Dock icon |
+| List remote windows | Menu bar **Window** menu, or right-click a Dock icon |
 | Toggle the IME (Korean/Japanese) | Right ⌘ |
 | Exchange files | The `Mac` drive in the remote File Explorer (`\\tsclient\Mac`) |
 | Disconnect, restart the remote PC | Power button in the Start menu |
@@ -195,7 +195,7 @@ Stated openly. All of it happens only inside the session Pstsc connects to.
   - keeps one 1×1 window open, because Windows signs out a RemoteApp session that has no visible app window,
   - replaces a Pstsc helper left over from a previous connection in the same session.
 - Steady memory use is about 25 MB (about 10 MB for PowerShell plus conhost).
-- The "remote PC resource usage" menu item runs a fixed measuring script (`resources.ps1`) once.
+- The **Remote PC Resource Usage** menu item runs a fixed measuring script (`resources.ps1`) once.
 
 ## What is stored on the Mac
 
@@ -225,11 +225,11 @@ Stated openly. All of it happens only inside the session Pstsc connects to.
 - Connecting or disconnecting a display takes effect after reconnecting.
 - Intel Macs are not supported yet: the build settings assume the Apple Silicon Homebrew path (`/opt/homebrew`).
 - No prebuilt app is distributed. A built app uses the FreeRDP installed on that Mac, so copying it to another Mac doesn't work.
-- The interface is Korean only.
 
 ## Troubleshooting
 
 - **The connection keeps dropping and coming back**: another device (for example Microsoft's Windows App) is connected with the same account, and the two keep taking the session from each other. Use one at a time.
+- **"Another user is signed in on the remote PC"**: Windows Pro allows only one signed-in user at a time. Sign the other account out on the remote PC (sign out, not lock), or allow the connection in the prompt shown on that PC's screen.
 - **It prints "already running" and quits**: Pstsc is already running. Only one instance runs at a time.
 - **Programs don't start**: check that `enable-remoteapp.reg` was applied on the remote PC.
 - **Anything else**: see `~/Library/Logs/Pstsc/agent.log`. To protect your privacy it records only connection status and errors; window titles, launched apps, the remote address and account are never logged. FreeRDP's own log includes the remote PC name and account, so it is off by default. Turn it on only for debugging, e.g. `WLOG_LEVEL=INFO swift run PstscAgent`, and don't post that log publicly.

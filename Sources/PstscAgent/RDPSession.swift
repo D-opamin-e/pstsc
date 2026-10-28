@@ -44,6 +44,9 @@ protocol RDPSessionDelegate: AnyObject {
     func sessionDidConnect(_ session: RDPSession)
     /// RemoteApp mode: programs can be launched from now on.
     func sessionDidBecomeReady(_ session: RDPSession)
+    /// Another user is signed in on the remote PC (Windows Pro allows only one); the remote screen
+    /// is asking them whether to let us in, and logon fails if nobody answers.
+    func sessionFoundOtherUserSignedIn(_ session: RDPSession)
     func session(_ session: RDPSession, didDisconnect reason: RDPSession.DropReason, message: String?)
     /// A remote tray icon showed a balloon tip (shown as a Mac notification).
     func session(_ session: RDPSession, trayBalloonFrom windowId: UInt32, iconId: UInt32, title: String, text: String)
@@ -443,6 +446,8 @@ final class RDPSession {
             delegate?.sessionDidConnect(self)
         case PSTSC_STATE_READY:
             delegate?.sessionDidBecomeReady(self)
+        case PSTSC_STATE_OTHER_USER_SIGNED_IN:
+            delegate?.sessionFoundOtherUserSignedIn(self)
         case PSTSC_STATE_FAILED, PSTSC_STATE_DISCONNECTED:
             delegate?.session(self, didDisconnect: DropReason(errorCode: errorCode), message: message.isEmpty ? nil : message)
         default:

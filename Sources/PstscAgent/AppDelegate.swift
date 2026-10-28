@@ -27,6 +27,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, RDPSessionDelegate, NS
     private var reconnectAttempts = 0
     /// Set when the user signs out of / shuts down the remote PC from the power menu: no auto-reconnect.
     private var userEndedRemoteSession = false
+    /// Another user holds the remote PC; reconnecting would only ask them again and again.
+    private var otherUserSignedIn = false
     private var reconnectWork: DispatchWorkItem?
 
     private let connectWindow = ConnectWindowController()
@@ -36,7 +38,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, RDPSessionDelegate, NS
     private lazy var startMenu = StartMenuController(catalog: catalog, icons: appIcons, prefs: startPrefs)
     /// Groups remote windows by program and gives each program its own Dock icon.
     private lazy var programs = ProgramTracker(catalog: catalog, icons: appIcons)
-    private let windowListMenu = NSMenu(title: "창")
+    private let windowListMenu = NSMenu(title: L("창"))
     private var modeMenuItem: NSMenuItem?
     private var shareHomeItem: NSMenuItem?
     private var loginItemItem: NSMenuItem?
@@ -269,13 +271,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, RDPSessionDelegate, NS
         case .disconnect:
             disconnect()
         case .signOut:
-            confirmRemote("원격 PC에서 로그아웃할까요?", detail: "열려 있는 원격 프로그램이 모두 닫힙니다.",
+            confirmRemote(L("원격 PC에서 로그아웃할까요?"), detail: L("열려 있는 원격 프로그램이 모두 닫힙니다."),
                           program: #"C:\Windows\System32\logoff.exe"#, arguments: "", staysDisconnected: true)
         case .restart:
-            confirmRemote("원격 PC를 다시 시작할까요?", detail: "열려 있는 원격 프로그램이 모두 닫히고 연결이 끊깁니다.",
+            confirmRemote(L("원격 PC를 다시 시작할까요?"), detail: L("열려 있는 원격 프로그램이 모두 닫히고 연결이 끊깁니다."),
                           program: #"C:\Windows\System32\shutdown.exe"#, arguments: "/r /t 0")
         case .shutDown:
-            confirmRemote("원격 PC를 끌까요?", detail: "다시 켜기 전까지 원격 PC에 연결할 수 없습니다.",
+            confirmRemote(L("원격 PC를 끌까요?"), detail: L("다시 켜기 전까지 원격 PC에 연결할 수 없습니다."),
                           program: #"C:\Windows\System32\shutdown.exe"#, arguments: "/s /t 0", staysDisconnected: true)
         }
     }
@@ -286,8 +288,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, RDPSessionDelegate, NS
         let alert = NSAlert()
         alert.messageText = question
         alert.informativeText = detail
-        alert.addButton(withTitle: "확인")
-        alert.addButton(withTitle: "취소")
+        alert.addButton(withTitle: L("확인"))
+        alert.addButton(withTitle: L("취소"))
         NSApp.activate()
         guard alert.runModal() == .alertFirstButtonReturn else { return }
         userEndedRemoteSession = staysDisconnected
@@ -298,18 +300,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, RDPSessionDelegate, NS
         let menu = NSMenu()
         guard session != nil else {
             if reconnectWork != nil {
-                menu.addItem(withTitle: "다시 연결하는 중… (취소)", action: #selector(disconnect), keyEquivalent: "")
+                menu.addItem(withTitle: L("다시 연결하는 중… (취소)"), action: #selector(disconnect), keyEquivalent: "")
             }
-            menu.addItem(withTitle: "원격 PC 연결…", action: #selector(showConnectWindow), keyEquivalent: "")
+            menu.addItem(withTitle: L("원격 PC 연결…"), action: #selector(showConnectWindow), keyEquivalent: "")
             return menu
         }
-        menu.addItem(withTitle: "Windows 시작", action: #selector(openWindowsStart), keyEquivalent: "")
-        menu.addItem(withTitle: mode == .apps ? "Windows 데스크톱 보기" : "앱 창 모드로 돌아가기",
+        menu.addItem(withTitle: L("Windows 시작"), action: #selector(openWindowsStart), keyEquivalent: "")
+        menu.addItem(withTitle: mode == .apps ? L("Windows 데스크톱 보기") : L("앱 창 모드로 돌아가기"),
                      action: #selector(toggleMode), keyEquivalent: "")
         if let windows = windowManager?.appWindows, !windows.isEmpty {
             menu.addItem(.separator())
             for window in windows {
-                let item = NSMenuItem(title: window.info.title.isEmpty ? "(제목 없음)" : window.info.title,
+                let item = NSMenuItem(title: window.info.title.isEmpty ? L("(제목 없음)") : window.info.title,
                                       action: #selector(showRemoteWindow(_:)), keyEquivalent: "")
                 item.representedObject = window
                 menu.addItem(item)
@@ -383,11 +385,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, RDPSessionDelegate, NS
             options.userDrivePath = FileManager.default.homeDirectoryForCurrentUser.path
         }
 
-        connectWindow.setBusy(true, status: "연결 중…")
+        connectWindow.setBusy(true, status: L("연결 중…"))
         updateModeMenuTitle()
         if !session.connect(options) {
             tearDownSession()
-            connectWindow.setBusy(false, status: "연결 설정을 만들지 못했습니다. 주소 형식을 확인하세요.")
+            connectWindow.setBusy(false, status: L("연결 설정을 만들지 못했습니다. 주소 형식을 확인하세요."))
             connectWindow.showWindow(nil)
         }
     }
@@ -428,16 +430,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate, RDPSessionDelegate, NS
 
     func sessionDidConnect(_ session: RDPSession) {
         guard session === self.session else { return }
-        connectWindow.setBusy(false, status: "연결됨")
+        connectWindow.setBusy(false, status: L("연결됨"))
         connectWindow.window?.orderOut(nil)
         if mode == .desktop {
             desktopWindow?.present()
         }
     }
 
+    func sessionFoundOtherUserSignedIn(_ session: RDPSession) {
+        guard session === self.session else { return }
+        otherUserSignedIn = true
+        stopReconnecting()
+        connectWindow.setBusy(true, status: L("원격 PC에 다른 사용자가 로그인되어 있습니다. 원격 PC 화면에서 허용하거나 그 사용자가 로그아웃해야 연결됩니다."))
+        connectWindow.showWindow(nil)
+        NSApp.activate()
+    }
+
     func sessionDidBecomeReady(_ session: RDPSession) {
         guard session === self.session else { return }
         ready = true
+        otherUserSignedIn = false
         hasBeenReady = true
         stopReconnecting()
         if rememberOnSuccess, let credentials {
@@ -458,6 +470,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, RDPSessionDelegate, NS
         FileHandle.standardError.write(Data("[pstsc] disconnected: \(reason) \(message ?? "")\n".utf8))
 
         switch reason {
+        case .loggedOff where otherUserSignedIn:
+            otherUserSignedIn = false
+            connectWindow.setBusy(false, status: L("원격 PC에 다른 사용자가 로그인되어 있어 연결하지 못했습니다. 그 사용자가 로그아웃한 뒤 다시 연결하세요."))
         case .loggedOff where credentials != nil && !userEndedRemoteSession:
             // Windows ended the remote session (e.g. timed out): start a fresh one quietly.
             scheduleReconnect()
@@ -472,9 +487,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, RDPSessionDelegate, NS
             }
             credentials = nil
             updateToggleItems()
-            connectWindow.setBusy(false, status: "비밀번호 또는 계정을 확인하세요." + (message.map { " (\($0))" } ?? ""))
+            connectWindow.setBusy(false, status: L("비밀번호 또는 계정을 확인하세요.") + (message.map { " (\($0))" } ?? ""))
         default:
-            connectWindow.setBusy(false, status: message.map { "연결 끊김: \($0)" } ?? "연결이 끊겼습니다.")
+            connectWindow.setBusy(false, status: message.map { L("연결 끊김: %@", $0) } ?? L("연결이 끊겼습니다."))
         }
         stopReconnecting()
         pendingLaunch = nil
@@ -505,8 +520,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, RDPSessionDelegate, NS
     func session(_ session: RDPSession, failedToLaunch program: String, code: UInt16) {
         guard session === self.session else { return }
         let alert = NSAlert()
-        alert.messageText = "프로그램을 실행하지 못했습니다"
-        alert.informativeText = "\(program)\n오류 코드: \(code)\n원격 PC에서 RemoteApp 허용 설정과 프로그램 경로를 확인하세요."
+        alert.messageText = L("프로그램을 실행하지 못했습니다")
+        alert.informativeText = L("%@\n오류 코드: %d\n원격 PC에서 RemoteApp 허용 설정과 프로그램 경로를 확인하세요.", program, Int32(code))
         alert.runModal()
     }
 
@@ -532,33 +547,33 @@ final class AppDelegate: NSObject, NSApplicationDelegate, RDPSessionDelegate, NS
 
         let appItem = NSMenuItem()
         let appMenu = NSMenu()
-        appMenu.addItem(withTitle: "Windows 시작", action: #selector(openWindowsStart), keyEquivalent: "")
-        let modeItem = appMenu.addItem(withTitle: "Windows 데스크톱 보기", action: #selector(toggleMode), keyEquivalent: "")
+        appMenu.addItem(withTitle: L("Windows 시작"), action: #selector(openWindowsStart), keyEquivalent: "")
+        let modeItem = appMenu.addItem(withTitle: L("Windows 데스크톱 보기"), action: #selector(toggleMode), keyEquivalent: "")
         modeMenuItem = modeItem
-        appMenu.addItem(withTitle: "경로로 원격 프로그램 실행…", action: #selector(launchProgramByPath), keyEquivalent: "")
+        appMenu.addItem(withTitle: L("경로로 원격 프로그램 실행…"), action: #selector(launchProgramByPath), keyEquivalent: "")
         appMenu.addItem(.separator())
-        shareHomeItem = appMenu.addItem(withTitle: "Mac 홈 폴더를 원격 PC와 공유 ('Mac' 드라이브)",
+        shareHomeItem = appMenu.addItem(withTitle: L("Mac 홈 폴더를 원격 PC와 공유 ('Mac' 드라이브)"),
                                         action: #selector(toggleShareHome), keyEquivalent: "")
-        autoConnectItem = appMenu.addItem(withTitle: "실행하면 자동 연결 (키체인에 저장)",
+        autoConnectItem = appMenu.addItem(withTitle: L("실행하면 자동 연결 (키체인에 저장)"),
                                           action: #selector(toggleAutoConnect), keyEquivalent: "")
-        loginItemItem = appMenu.addItem(withTitle: "로그인 시 Pstsc 열기", action: #selector(toggleLoginItem), keyEquivalent: "")
-        appMenu.addItem(withTitle: "Launchpad 앱 폴더 열기", action: #selector(openLaunchersFolder), keyEquivalent: "")
-        appMenu.addItem(withTitle: "원격 PC 리소스 사용량…", action: #selector(showRemoteResources), keyEquivalent: "")
+        loginItemItem = appMenu.addItem(withTitle: L("로그인 시 Pstsc 열기"), action: #selector(toggleLoginItem), keyEquivalent: "")
+        appMenu.addItem(withTitle: L("Launchpad 앱 폴더 열기"), action: #selector(openLaunchersFolder), keyEquivalent: "")
+        appMenu.addItem(withTitle: L("원격 PC 리소스 사용량…"), action: #selector(showRemoteResources), keyEquivalent: "")
         updateToggleItems()
         appMenu.addItem(.separator())
-        appMenu.addItem(withTitle: "연결 끊기", action: #selector(disconnect), keyEquivalent: "")
-        appMenu.addItem(withTitle: "Pstsc 종료", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        appMenu.addItem(withTitle: L("연결 끊기"), action: #selector(disconnect), keyEquivalent: "")
+        appMenu.addItem(withTitle: L("Pstsc 종료"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         appItem.submenu = appMenu
         main.addItem(appItem)
 
         // Standard edit commands for the connect window's text fields. Remote windows take
         // Command shortcuts before the menu sees them (RemoteContentView.performKeyEquivalent).
         let editItem = NSMenuItem()
-        let editMenu = NSMenu(title: "편집")
-        editMenu.addItem(withTitle: "잘라내기", action: #selector(NSText.cut(_:)), keyEquivalent: "x")
-        editMenu.addItem(withTitle: "복사", action: #selector(NSText.copy(_:)), keyEquivalent: "c")
-        editMenu.addItem(withTitle: "붙여넣기", action: #selector(NSText.paste(_:)), keyEquivalent: "v")
-        editMenu.addItem(withTitle: "전체 선택", action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
+        let editMenu = NSMenu(title: L("편집"))
+        editMenu.addItem(withTitle: L("잘라내기"), action: #selector(NSText.cut(_:)), keyEquivalent: "x")
+        editMenu.addItem(withTitle: L("복사"), action: #selector(NSText.copy(_:)), keyEquivalent: "c")
+        editMenu.addItem(withTitle: L("붙여넣기"), action: #selector(NSText.paste(_:)), keyEquivalent: "v")
+        editMenu.addItem(withTitle: L("전체 선택"), action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
         editItem.submenu = editMenu
         main.addItem(editItem)
 
@@ -601,8 +616,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, RDPSessionDelegate, NS
     @objc private func toggleLoginItem() {
         if let error = LoginItem.setEnabled(!LoginItem.isEnabled) {
             let alert = NSAlert()
-            alert.messageText = "로그인 항목을 바꾸지 못했습니다"
-            alert.informativeText = "응용 프로그램 폴더의 Pstsc.app으로 실행했을 때만 설정할 수 있습니다.\n\(error)"
+            alert.messageText = L("로그인 항목을 바꾸지 못했습니다")
+            alert.informativeText = L("응용 프로그램 폴더의 Pstsc.app으로 실행했을 때만 설정할 수 있습니다.\n%@", error)
             alert.runModal()
         }
         updateToggleItems()
@@ -617,7 +632,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, RDPSessionDelegate, NS
         guard mode == .apps, ready, let session else {
             if showResult {
                 let alert = NSAlert()
-                alert.messageText = "앱 창 모드로 연결된 상태에서만 측정할 수 있습니다."
+                alert.messageText = L("앱 창 모드로 연결된 상태에서만 측정할 수 있습니다.")
                 alert.runModal()
             }
             return
@@ -649,8 +664,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, RDPSessionDelegate, NS
         scroll.documentView = text
         scroll.hasVerticalScroller = true
         let alert = NSAlert()
-        alert.messageText = "원격 PC 리소스 사용량"
-        alert.informativeText = "Pstsc 연결 세션의 프로세스와 원격 데스크톱 서비스를 3초 동안 측정했습니다."
+        alert.messageText = L("원격 PC 리소스 사용량")
+        alert.informativeText = L("Pstsc 연결 세션의 프로세스와 원격 데스크톱 서비스를 3초 동안 측정했습니다.")
         alert.accessoryView = scroll
         NSApp.activate()
         alert.runModal()
@@ -661,7 +676,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, RDPSessionDelegate, NS
     }
 
     private func updateModeMenuTitle() {
-        modeMenuItem?.title = mode == .apps ? "Windows 데스크톱 보기" : "앱 창 모드로 돌아가기"
+        modeMenuItem?.title = mode == .apps ? L("Windows 데스크톱 보기") : L("앱 창 모드로 돌아가기")
     }
 
     func menuNeedsUpdate(_ menu: NSMenu) {
@@ -669,15 +684,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, RDPSessionDelegate, NS
         menu.removeAllItems()
         let windows = windowManager?.appWindows ?? []
         if windows.isEmpty {
-            menu.addItem(withTitle: "열린 원격 창 없음", action: nil, keyEquivalent: "")
+            menu.addItem(withTitle: L("열린 원격 창 없음"), action: nil, keyEquivalent: "")
         }
         for window in windows {
-            let title = window.info.title.isEmpty ? "(제목 없음)" : window.info.title
+            let title = window.info.title.isEmpty ? L("(제목 없음)") : window.info.title
             let item = NSMenuItem(title: title, action: #selector(showRemoteWindow(_:)), keyEquivalent: "")
             item.target = self
             item.representedObject = window
             if window.info.showState == RemoteWindowInfo.showMinimized {
-                item.title += " (최소화됨)"
+                item.title += L(" (최소화됨)")
             }
             menu.addItem(item)
         }
@@ -699,13 +714,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, RDPSessionDelegate, NS
             return
         }
         let alert = NSAlert()
-        alert.messageText = "원격 프로그램 실행"
-        alert.informativeText = "원격 PC에 있는 실행 파일의 전체 경로를 입력하세요."
+        alert.messageText = L("원격 프로그램 실행")
+        alert.informativeText = L("원격 PC에 있는 실행 파일의 전체 경로를 입력하세요.")
         let field = NSTextField(frame: NSRect(x: 0, y: 0, width: 360, height: 24))
         field.placeholderString = #"C:\Program Files\...\program.exe"#
         alert.accessoryView = field
-        alert.addButton(withTitle: "실행")
-        alert.addButton(withTitle: "취소")
+        alert.addButton(withTitle: L("실행"))
+        alert.addButton(withTitle: L("취소"))
         alert.window.initialFirstResponder = field
         guard alert.runModal() == .alertFirstButtonReturn else { return }
         let path = field.stringValue.trimmingCharacters(in: .whitespaces)
@@ -720,7 +735,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, RDPSessionDelegate, NS
         guard session != nil || wasReconnecting else { return }
         tearDownSession()
         pendingLaunch = nil
-        connectWindow.setBusy(false, status: "연결을 끊었습니다.")
+        connectWindow.setBusy(false, status: L("연결을 끊었습니다."))
         connectWindow.showWindow(nil)
     }
 }

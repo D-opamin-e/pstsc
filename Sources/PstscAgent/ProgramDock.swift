@@ -204,7 +204,7 @@ final class ProgramTracker {
         let exe = Self.fileName(imageName.isEmpty ? applicationId : imageName)
         let base = exe.lowercased().hasSuffix(".exe") ? String(exe.dropLast(4)) : exe
         if !base.isEmpty { return base }
-        return title.isEmpty ? "Windows 앱" : title
+        return title.isEmpty ? L("Windows 앱") : title
     }
 
     private static func fileName(_ path: String) -> String {

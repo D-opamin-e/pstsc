@@ -29,7 +29,7 @@ final class DesktopWindowController: NSWindowController, NSWindowDelegate {
         let window = NSWindow(contentRect: NSRect(origin: .zero, size: desktopSize),
                               styleMask: [.titled, .closable, .miniaturizable, .resizable],
                               backing: .buffered, defer: false)
-        window.title = "Windows 데스크톱"
+        window.title = L("Windows 데스크톱")
         window.contentAspectRatio = desktopSize
         window.acceptsMouseMovedEvents = true
         window.isReleasedWhenClosed = false

@@ -38,11 +38,20 @@ final class StartMenuPrefs {
         static let recent = "startRecentAppIDs"
     }
 
-    /// Typical Windows 11 pins, used until the user pins something themselves.
+    /// Typical Windows 11 pins, used until the user pins something themselves. These are the
+    /// remote PC's Start menu names, so Korean, English and Japanese Windows are all listed.
     private static let defaultPinNames = [
-        "파일 탐색기", "설정", "Microsoft Edge", "네이버 웨일", "Chrome", "Google Chrome", "카카오톡",
-        "메모장", "계산기", "그림판", "사진", "Microsoft Store", "Word", "Excel", "PowerPoint", "Outlook",
-        "작업 관리자", "명령 프롬프트", "터미널",
+        "파일 탐색기", "File Explorer", "エクスプローラー",
+        "설정", "Settings", "設定",
+        "Microsoft Edge", "네이버 웨일", "Chrome", "Google Chrome", "카카오톡", "KakaoTalk", "LINE",
+        "메모장", "Notepad", "メモ帳",
+        "계산기", "Calculator", "電卓",
+        "그림판", "Paint", "ペイント",
+        "사진", "Photos", "フォト",
+        "Microsoft Store", "Word", "Excel", "PowerPoint", "Outlook",
+        "작업 관리자", "Task Manager", "タスク マネージャー",
+        "명령 프롬프트", "Command Prompt", "コマンド プロンプト",
+        "터미널", "Terminal", "ターミナル",
     ]
 
     func pinned(in catalog: [RemoteApp]) -> [RemoteApp] {

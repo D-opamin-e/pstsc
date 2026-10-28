@@ -43,4 +43,4 @@ codesign --force --sign - "$app" >/dev/null
 
 rm -rf "/Applications/Pstsc.app"
 cp -R "$app" "/Applications/Pstsc.app"
-echo "설치됨: /Applications/Pstsc.app"
+echo "설치됨 / Installed / インストール完了: /Applications/Pstsc.app"

@@ -28,6 +28,7 @@ final class StartMenuController: NSWindowController, NSTextFieldDelegate, NSTabl
     private let searchField = NSTextField()
     private let homeView = NSStackView()
     private let pinnedGrid = NSGridView()
+    private let loadingLabel = NSTextField(wrappingLabelWithString: "")
     private let recentGrid = NSGridView()
     private let recentEmptyLabel = NSTextField(wrappingLabelWithString:
         L("최근에 실행한 앱이 여기에 표시됩니다. 고정하려면 앱을 우클릭하세요."))
@@ -204,15 +205,19 @@ final class StartMenuController: NSWindowController, NSTextFieldDelegate, NSTabl
         recentEmptyLabel.textColor = NSColor(white: 1, alpha: 0.75)
         recentEmptyLabel.font = .systemFont(ofSize: 12)
 
+        loadingLabel.textColor = NSColor(white: 1, alpha: 0.75)
+        loadingLabel.font = .systemFont(ofSize: 12)
+
         let spacer = NSView()
         spacer.setContentHuggingPriority(.init(1), for: .vertical)
 
         homeView.orientation = .vertical
         homeView.alignment = .leading
         homeView.spacing = 14
+        let loadingRow = Self.row(loadingLabel, accessory: nil)
         let recentEmpty = Self.row(recentEmptyLabel, accessory: nil)
-        homeView.setViews([pinnedHeader, pinnedGrid, spacer, recentHeader, recentGrid, recentEmpty], in: .top)
-        for view in [pinnedHeader, recentHeader, recentEmpty] as [NSView] {
+        homeView.setViews([pinnedHeader, loadingRow, pinnedGrid, spacer, recentHeader, recentGrid, recentEmpty], in: .top)
+        for view in [pinnedHeader, loadingRow, recentHeader, recentEmpty] as [NSView] {
             view.widthAnchor.constraint(equalTo: homeView.widthAnchor).isActive = true
         }
         homeView.setCustomSpacing(30, after: spacer)
@@ -324,12 +329,11 @@ final class StartMenuController: NSWindowController, NSTextFieldDelegate, NSTabl
     }
 
     private func fillHome() {
+        updateLoadingLabel()
         Self.clear(pinnedGrid)
         let pinned = prefs.pinned(in: catalog.apps)
-        if pinned.isEmpty {
-            let label = NSTextField(wrappingLabelWithString: catalog.apps.isEmpty
-                ? L("원격 PC에서 앱 목록을 받아오는 중입니다…")
-                : L("고정된 앱이 없습니다. '모두'에서 앱을 우클릭해 고정하세요."))
+        if pinned.isEmpty && !catalog.apps.isEmpty {
+            let label = NSTextField(wrappingLabelWithString: L("고정된 앱이 없습니다. '모두'에서 앱을 우클릭해 고정하세요."))
             label.textColor = NSColor(white: 1, alpha: 0.75)
             pinnedGrid.addRow(with: [label])
         }
@@ -344,6 +348,20 @@ final class StartMenuController: NSWindowController, NSTextFieldDelegate, NSTabl
         for start in stride(from: 0, to: recent.count, by: 2) {
             let items: [NSView] = recent[start..<min(start + 2, recent.count)].map { makeRecentItem(for: $0) }
             recentGrid.addRow(with: items)
+        }
+    }
+
+    /// Shows "getting the app list…" until it arrives, then an icon-download percentage, then hides.
+    private func updateLoadingLabel() {
+        if catalog.apps.isEmpty {
+            loadingLabel.stringValue = L("원격 PC에서 앱 목록을 받아오는 중입니다…")
+            loadingLabel.superview?.isHidden = false
+        } else if let p = catalog.iconProgress() {
+            let percent = Int(Double(p.done) / Double(p.total) * 100)
+            loadingLabel.stringValue = L("앱 아이콘 받는 중… %d%% (%d/%d)", Int32(percent), Int32(p.done), Int32(p.total))
+            loadingLabel.superview?.isHidden = false
+        } else {
+            loadingLabel.superview?.isHidden = true
         }
     }
 

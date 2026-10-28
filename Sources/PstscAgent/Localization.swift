@@ -148,6 +148,8 @@ private enum Translations {
         "'%@'에 대한 결과가 없습니다": ("No results for '%@'", "「%@」の検索結果はありません"),
         "원격 PC에서 앱 목록을 받아오는 중입니다…": (
             "Getting the app list from the remote PC…", "リモート PC からアプリの一覧を取得しています…"),
+        "앱 아이콘 받는 중… %d%% (%d/%d)": (
+            "Getting app icons… %d%% (%d/%d)", "アプリのアイコンを取得中… %d%%(%d/%d)"),
         "고정된 앱이 없습니다. '모두'에서 앱을 우클릭해 고정하세요.": (
             "No pinned apps. Right-click an app in 'All' to pin it.",
             "ピン留めしたアプリはありません。「すべて」でアプリを右クリックしてピン留めしてください。"),

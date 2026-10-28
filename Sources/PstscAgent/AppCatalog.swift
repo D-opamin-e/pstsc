@@ -18,6 +18,8 @@ final class AppCatalog {
     var onChange: (() -> Void)?
     /// The helper finished exporting app icons (they keep arriving for a while after the list).
     var onIconsChange: (() -> Void)?
+    /// Called about once a second while icons download, so the UI can show progress.
+    var onIconsProgress: (() -> Void)?
 
     static let supportFolder = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
         .appendingPathComponent("Pstsc", isDirectory: true)
@@ -270,21 +272,40 @@ final class AppCatalog {
         }
     }
 
-    /// Icons take a while (one per app, only missing ones); poll for icons.done for up to 5 minutes.
+    /// Icons take a while (one per app, only missing ones); poll for icons.done for up to 5 minutes,
+    /// reporting progress each second so the Start menu can show a percentage.
     private func watchForIcons(since started: Date) {
         iconTimer?.invalidate()
         let done = Self.sharedFolder.appendingPathComponent("icons.done")
         var elapsed = 0
-        iconTimer = Timer.scheduledTimer(withTimeInterval: 3, repeats: true) { [weak self] timer in
-            elapsed += 3
+        iconTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] timer in
+            guard let self else { timer.invalidate(); return }
+            elapsed += 1
             if let modified = try? done.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate,
                modified >= started.addingTimeInterval(-2) {
                 timer.invalidate()
-                self?.onIconsChange?()
+                self.onIconsChange?()
             } else if elapsed >= 300 {
                 timer.invalidate()
+            } else {
+                self.onIconsProgress?()
             }
         }
+    }
+
+    /// How many of the current apps already have an icon on the Mac, out of the total.
+    /// nil while the app list hasn't arrived or once every icon is in.
+    func iconProgress() -> (done: Int, total: Int)? {
+        let total = apps.count
+        guard total > 0 else { return nil }
+        let folder = Self.sharedFolder.appendingPathComponent("icons", isDirectory: true)
+        let fm = FileManager.default
+        var done = 0
+        for app in apps {
+            let key = Insecure.MD5.hash(data: Data(app.appID.utf8)).map { String(format: "%02x", $0) }.joined()
+            if fm.fileExists(atPath: folder.appendingPathComponent("\(key).png").path) { done += 1 }
+        }
+        return done >= total ? nil : (done, total)
     }
 
     private struct Entry: Decodable {

@@ -76,6 +76,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, RDPSessionDelegate, NS
             self.startMenu.reload()
             self.launchers.sync(apps: self.catalog.apps)
         }
+        catalog.onIconsProgress = { [weak self] in self?.startMenu.reload() }
         startMenu.onLaunch = { [weak self] app in self?.launch(app) }
         startMenu.onPower = { [weak self] action in self?.perform(action) }
         setUpProgramDock()

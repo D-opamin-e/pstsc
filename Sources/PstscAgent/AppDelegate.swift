@@ -27,8 +27,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, RDPSessionDelegate, NS
     private var reconnectAttempts = 0
     /// Set when the user signs out of / shuts down the remote PC from the power menu: no auto-reconnect.
     private var userEndedRemoteSession = false
-    /// Another user holds the remote PC; reconnecting would only ask them again and again.
-    private var otherUserSignedIn = false
     private var reconnectWork: DispatchWorkItem?
 
     private let connectWindow = ConnectWindowController()
@@ -63,6 +61,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, RDPSessionDelegate, NS
             }
             self.updateToggleItems()
             self.connect(mode: .apps)
+        }
+        connectWindow.onConnectDesktop = { [weak self] in
+            guard let self, self.credentials != nil else { return }
+            self.connect(mode: .desktop)
         }
         catalog.onChange = { [weak self] in
             guard let self else { return }
@@ -439,9 +441,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, RDPSessionDelegate, NS
 
     func sessionFoundOtherUserSignedIn(_ session: RDPSession) {
         guard session === self.session else { return }
-        otherUserSignedIn = true
+        // In desktop mode the remote console shows the "take over this session?" prompt and the
+        // connection proceeds once answered, so let it continue.
+        guard mode == .apps else { return }
+        // Apps-mode (RemoteApp) has no screen to show the "take over this session?" prompt, so the
+        // server just refuses. Offer desktop mode, which does show that prompt and can take over.
         stopReconnecting()
-        connectWindow.setBusy(true, status: L("원격 PC에 다른 사용자가 로그인되어 있습니다. 원격 PC 화면에서 허용하거나 그 사용자가 로그아웃해야 연결됩니다."))
+        tearDownSession()
+        connectWindow.offerDesktopMode(status: L("원격 PC가 이미 사용 중입니다(다른 사용자이거나, PC 앞에서 로그인한 같은 계정). 앱 창 모드로는 연결할 수 없습니다. 데스크톱 모드로 접속하면 그 세션을 넘겨받을 수 있습니다. 넘겨받으면 원격 PC는 잠깁니다."))
         connectWindow.showWindow(nil)
         NSApp.activate()
     }
@@ -449,7 +456,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, RDPSessionDelegate, NS
     func sessionDidBecomeReady(_ session: RDPSession) {
         guard session === self.session else { return }
         ready = true
-        otherUserSignedIn = false
         hasBeenReady = true
         stopReconnecting()
         if rememberOnSuccess, let credentials {
@@ -470,9 +476,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, RDPSessionDelegate, NS
         FileHandle.standardError.write(Data("[pstsc] disconnected: \(reason) \(message ?? "")\n".utf8))
 
         switch reason {
-        case .loggedOff where otherUserSignedIn:
-            otherUserSignedIn = false
-            connectWindow.setBusy(false, status: L("원격 PC에 다른 사용자가 로그인되어 있어 연결하지 못했습니다. 그 사용자가 로그아웃한 뒤 다시 연결하세요."))
         case .loggedOff where credentials != nil && !userEndedRemoteSession:
             // Windows ended the remote session (e.g. timed out): start a fresh one quietly.
             scheduleReconnect()

@@ -56,12 +56,11 @@ private enum Translations {
         "연결 끊김: %@": ("Disconnected: %@", "切断されました: %@"),
         "연결이 끊겼습니다.": ("Disconnected.", "切断されました。"),
         "연결을 끊었습니다.": ("Disconnected.", "切断しました。"),
-        "원격 PC에 다른 사용자가 로그인되어 있습니다. 원격 PC 화면에서 허용하거나 그 사용자가 로그아웃해야 연결됩니다.": (
-            "Another user is signed in on the remote PC. They must allow the connection on that PC's screen or sign out.",
-            "リモート PC に別のユーザーがサインインしています。そのユーザーがリモート PC の画面で許可するか、サインアウトする必要があります。"),
-        "원격 PC에 다른 사용자가 로그인되어 있어 연결하지 못했습니다. 그 사용자가 로그아웃한 뒤 다시 연결하세요.": (
-            "Couldn't connect because another user is signed in on the remote PC. Connect again after they sign out.",
-            "リモート PC に別のユーザーがサインインしているため接続できませんでした。そのユーザーがサインアウトしてから再接続してください。"),
+        "데스크톱 모드로 접속": ("Connect in Desktop Mode", "デスクトップモードで接続"),
+        "데스크톱 모드로 연결 중…": ("Connecting in desktop mode…", "デスクトップモードで接続中…"),
+        "원격 PC가 이미 사용 중입니다(다른 사용자이거나, PC 앞에서 로그인한 같은 계정). 앱 창 모드로는 연결할 수 없습니다. 데스크톱 모드로 접속하면 그 세션을 넘겨받을 수 있습니다. 넘겨받으면 원격 PC는 잠깁니다.": (
+            "The remote PC is already in use (another user, or the same account signed in at the PC). App window mode can't connect. Desktop mode can take over that session; when it does, the remote PC is locked.",
+            "リモート PC はすでに使用中です(別のユーザー、または PC の前でサインインした同じアカウント)。アプリウィンドウモードでは接続できません。デスクトップモードで接続すると、そのセッションを引き継げます。引き継ぐと、リモート PC はロックされます。"),
 
         // Menus
         "Windows 시작": ("Windows Start", "Windows スタート"),

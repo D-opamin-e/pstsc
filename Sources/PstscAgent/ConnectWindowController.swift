@@ -10,11 +10,14 @@ struct Credentials {
 final class ConnectWindowController: NSWindowController {
     /// remember: save the password in the Keychain and connect automatically from now on.
     var onConnect: ((Credentials, _ remember: Bool) -> Void)?
+    /// Retry the last connection in desktop mode (takes over an in-use session).
+    var onConnectDesktop: (() -> Void)?
 
     private let hostField = NSTextField()
     private let userField = NSTextField()
     private let passwordField = NSSecureTextField()
     private let statusLabel = NSTextField(labelWithString: "")
+    private let desktopButton = NSButton(title: L("데스크톱 모드로 접속"), target: nil, action: nil)
     private let connectButton = NSButton(title: L("연결"), target: nil, action: nil)
     private let rememberBox = NSButton(checkboxWithTitle: L("비밀번호를 키체인에 저장하고 다음부터 자동 연결"), target: nil, action: nil)
 
@@ -44,6 +47,11 @@ final class ConnectWindowController: NSWindowController {
         connectButton.keyEquivalent = "\r"
         connectButton.bezelStyle = .push
 
+        desktopButton.target = self
+        desktopButton.action = #selector(connectDesktop)
+        desktopButton.bezelStyle = .push
+        desktopButton.isHidden = true
+
         let grid = NSGridView(views: [
             [NSTextField(labelWithString: L("원격 PC 주소")), hostField],
             [NSTextField(labelWithString: L("사용자")), userField],
@@ -56,7 +64,7 @@ final class ConnectWindowController: NSWindowController {
         grid.columnSpacing = 10
         grid.column(at: 1).width = 300
 
-        let buttons = NSStackView(views: [statusLabel, connectButton])
+        let buttons = NSStackView(views: [statusLabel, desktopButton, connectButton])
         buttons.orientation = .horizontal
         buttons.distribution = .fill
         statusLabel.setContentHuggingPriority(.defaultLow, for: .horizontal)
@@ -87,6 +95,14 @@ final class ConnectWindowController: NSWindowController {
     func setBusy(_ busy: Bool, status: String) {
         connectButton.isEnabled = !busy
         statusLabel.stringValue = status
+        desktopButton.isHidden = true
+    }
+
+    /// Shows a status plus a "connect in desktop mode" button (e.g. a session is already in use).
+    func offerDesktopMode(status: String) {
+        connectButton.isEnabled = true
+        statusLabel.stringValue = status
+        desktopButton.isHidden = false
     }
 
     @objc private func connect() {
@@ -105,5 +121,10 @@ final class ConnectWindowController: NSWindowController {
         passwordField.stringValue = ""
         setBusy(true, status: L("연결 중…"))
         onConnect?(credentials, rememberBox.state == .on)
+    }
+
+    @objc private func connectDesktop() {
+        setBusy(true, status: L("데스크톱 모드로 연결 중…"))
+        onConnectDesktop?()
     }
 }

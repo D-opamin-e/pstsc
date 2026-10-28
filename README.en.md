@@ -229,7 +229,7 @@ Stated openly. All of it happens only inside the session Pstsc connects to.
 ## Troubleshooting
 
 - **The connection keeps dropping and coming back**: another device (for example Microsoft's Windows App) is connected with the same account, and the two keep taking the session from each other. Use one at a time.
-- **"Another user is signed in on the remote PC"**: Windows Pro allows only one signed-in user at a time. Sign the other account out on the remote PC (sign out, not lock), or allow the connection in the prompt shown on that PC's screen.
+- **"The remote PC is already in use"**: someone (or the same account) is signed in at the remote PC. Windows Pro allows only one active session, so app window mode can't connect. Click the **Connect in Desktop Mode** button in the connect window to take over that session (the remote PC is then locked). Two people using it at the same time is not possible on Windows Pro — that needs a Hyper-V VM or Windows Server.
 - **It prints "already running" and quits**: Pstsc is already running. Only one instance runs at a time.
 - **Programs don't start**: check that `enable-remoteapp.reg` was applied on the remote PC.
 - **Anything else**: see `~/Library/Logs/Pstsc/agent.log`. To protect your privacy it records only connection status and errors; window titles, launched apps, the remote address and account are never logged. FreeRDP's own log includes the remote PC name and account, so it is off by default. Turn it on only for debugging, e.g. `WLOG_LEVEL=INFO swift run PstscAgent`, and don't post that log publicly.

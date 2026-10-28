@@ -479,6 +479,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, RDPSessionDelegate, NS
         FileHandle.standardError.write(Data("[pstsc] disconnected: \(reason) \(message ?? "")\n".utf8))
 
         switch reason {
+        case .loggedOff where !hasBeenReady && mode == .apps:
+            // Logged off before the RemoteApp session ever started: the remote PC isn't set up for
+            // RemoteApp (enable-remoteapp.reg not applied, or applied without a restart). Looping
+            // would just repeat this, so stop and say so.
+            stopReconnecting()
+            connectWindow.setBusy(false, status: L("이 원격 PC는 아직 Pstsc 연결 준비가 되어 있지 않습니다. 저장소의 enable-remoteapp.reg를 원격 PC에서 실행하고 재시작한 뒤 다시 연결하세요."))
+            connectWindow.showWindow(nil)
+            NSApp.activate()
+            return
         case .loggedOff where credentials != nil && !userEndedRemoteSession:
             // Windows ended the remote session (e.g. timed out): start a fresh one quietly.
             scheduleReconnect()

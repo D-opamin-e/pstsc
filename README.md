@@ -1,5 +1,9 @@
 # Pstsc
 
+**한국어** | [English](README.en.md) | [日本語](README.ja.md)
+
+> Run apps from a remote Windows PC as seamless Mac windows (RDP RemoteApp, Parallels Coherence style). **[Read in English →](README.en.md)**
+
 **원격 Windows PC의 프로그램을 맥 앱처럼 쓰는 macOS용 RemoteApp 클라이언트**
 
 ![MacBook Air 맥 바탕화면 위에 원격 Windows PC의 3DMark 창만 떠 있는 화면](docs/images/hero.webp)

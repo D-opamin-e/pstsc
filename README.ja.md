@@ -51,72 +51,37 @@ Pstsc は、すでに持っている Windows PC のアプリを 1 つずつ Mac 
 
 | 項目 | 内容 |
 |---|---|
-| Mac | **Apple シリコン**(M1 以降)の Mac、macOS 14 以降。Intel Mac にはまだ対応していません(下記参照)。 |
-| Mac のアカウント | 管理者アカウント(`/Applications` にインストールするため) |
-| 開発ツール | Xcode コマンドラインツール(Swift 6 以降)、[Homebrew](https://brew.sh) |
-| ライブラリ | FreeRDP 3.32 以降(`brew install freerdp`) |
+| Mac | **Apple シリコン**(M1 以降)の Mac、macOS 14 以降。Intel Mac にはまだ対応していません。 |
 | リモート PC | リモートデスクトップを有効にできる Windows 10/11 **Pro** 以上、または Windows Server。Home エディションは RDP のホストになれません。 |
 
 ## インストール
 
-完成したアプリはまだ配布していません。ソースを取得して**自分の Mac でビルド**してインストールします。初回は 10 分ほどかかります。
+### DMG でインストール(推奨)
 
-### 1. Xcode コマンドラインツールのインストール
+1. [Releases](https://github.com/D-opamin-e/pstsc/releases/latest) から `Pstsc-<バージョン>.dmg` をダウンロードします。
+2. DMG を開き、**Pstsc** を右側の **Applications(アプリケーション)** フォルダへドラッグします。
+3. アプリケーションフォルダから Pstsc を起動します。Dock アイコンを右クリック → オプション → **Dock に追加** を選ぶと便利です。
 
-ターミナル(アプリケーション → ユーティリティ → ターミナル)を開いて実行し、表示されたウィンドウで**インストール**を押します。Xcode アプリがすでにある場合は不要です。
+必要なライブラリ(FreeRDP、OpenSSL)はアプリに含まれているので、ほかにインストールするものはありません。
 
-```bash
-xcode-select --install
-```
-
-### 2. Homebrew のインストール
-
-すでにある場合は不要です。途中で Mac のログインパスワードを聞かれます。
+**初回起動時に「開発元を確認できません」と表示されたら**: Pstsc は Apple の開発者証明書で署名されていません。警告を閉じ、**システム設定 → プライバシーとセキュリティ** の下にある **このまま開く** を押してください。ターミナルで次のコマンドを一度実行しても構いません。
 
 ```bash
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+xattr -dr com.apple.quarantine /Applications/Pstsc.app
 ```
 
-終わったら、最後に表示される `Next steps` の案内どおりに PATH 設定のコマンド 2 行を実行し、ターミナルを開き直します。
-
-### 3. FreeRDP のインストール
-
-```bash
-brew install freerdp
-```
-
-### 4. Pstsc の取得とインストール
-
-```bash
-git clone https://github.com/D-opamin-e/pstsc.git
-cd pstsc
-scripts/build-app.sh
-```
-
-最後に `설치됨 / Installed / インストール完了: /Applications/Pstsc.app` と表示されれば成功です。このスクリプトはリリースビルドを行い、アイコン付きの `Pstsc.app` を作ってアプリケーションフォルダーに入れます。
-
-### 5. 起動
-
-アプリケーションフォルダーから **Pstsc** を起動します。Dock アイコンを右クリック → オプション → **Dock に追加** を選ぶと便利です。自分でビルドしたアプリなので「開発元が未確認」の警告は出ません。
-
-初回起動時に macOS から次の確認が出ることがあります。関連する機能を使うには許可してください。
-- 通知の許可: リモートの通知を Mac の通知として受け取る
+初回起動時、macOS が次の許可を求めることがあります。関連機能を使うにはすべて許可してください。
+- 通知: リモートの通知を Mac の通知として受け取る
 - キーチェーンへのアクセス: 保存したパスワードで自動接続する
-- デスクトップ・書類・ダウンロードフォルダーへのアクセス: リモート PC で `Mac` ドライブを開くとき
+- デスクトップ・書類・ダウンロードフォルダへのアクセス: リモート PC から `Mac` ドライブを開くとき
 
 ### アップデート
 
-起動中の Pstsc を先に終了(⌘Q)してから実行します。
-
-```bash
-cd pstsc
-git pull
-scripts/build-app.sh
-```
+Pstsc を終了(⌘Q)してから、新しい DMG で同じ手順でインストールし「置き換える」を選びます。設定と保存したパスワードはそのまま残ります。
 
 ### アンインストール
 
-Pstsc を終了してから、次を削除します。保存したパスワードは、キーチェーンアクセスで `com.pstsc.agent` の項目を削除してください。
+Pstsc を終了してから次を削除します。保存したパスワードはキーチェーンアクセスで `com.pstsc.agent` の項目を削除してください。
 
 ```bash
 rm -rf /Applications/Pstsc.app "$HOME/Applications/Pstsc 앱" \
@@ -124,22 +89,21 @@ rm -rf /Applications/Pstsc.app "$HOME/Applications/Pstsc 앱" \
 defaults delete com.pstsc.agent
 ```
 
-### インストール時のトラブル
+### ソースからビルド
 
-| 症状 | 対処 |
-|---|---|
-| `xcrun: error: invalid active developer path` | 手順 1(`xcode-select --install`)をもう一度実行します。 |
-| `brew: command not found` | 手順 2 の最後の PATH 設定をしていません。表示された 2 行を実行し、ターミナルを開き直します。 |
-| `'freerdp/...' file not found` または `library 'freerdp3' not found` | FreeRDP がないか、Intel Mac です。`brew install freerdp` を確認してください。Intel Mac にはまだ対応していません。 |
-| `Permission denied`(Applications) | 管理者アカウントではありません。管理者アカウントで実行してください。 |
-
-### 開発時の実行
-
-アプリをインストールせずにコードの変更を試すときは、次のように実行します(Dock 用の補助プログラムも一緒にビルドするため、先に `swift build` します)。
+Xcode コマンドラインツール(`xcode-select --install`)と [Homebrew](https://brew.sh) が必要です。
 
 ```bash
-swift build && swift run PstscAgent
+brew install cmake ninja
+git clone https://github.com/D-opamin-e/pstsc.git
+cd pstsc
+scripts/build-app.sh      # ビルドして /Applications/Pstsc.app にインストール
+scripts/build-dmg.sh      # 配布用の build/Pstsc-<バージョン>.dmg を作成
 ```
+
+初回ビルド時は `scripts/build-freerdp.sh` が FreeRDP と OpenSSL のソースを取得し、アプリに同梱できるようにビルドします(数分かかり、`build/deps` に保存されます)。Homebrew の `freerdp` パッケージは使いません。GPL コーデック(x264、x265)が付いてくるため一緒に配布できず、ビルドした macOS のバージョンでしか動かないためです。
+
+コードを編集しながらすぐ試すときは `swift build && swift run PstscAgent` を使います。この場合も `build/deps` が必要なので、先に `scripts/build-freerdp.sh` を一度実行してください。
 
 ## リモート PC の準備
 
@@ -223,8 +187,8 @@ Mac へのインストール後、接続する Windows PC で一度だけ設定�
 - Windows 11 のウィンドウのサイズ変更ハンドルは見えている枠の外側にあるため、つかめないことがあります。
 - クリップボードの共有、リモートのマウスカーソルの形、Retina 解像度にはまだ対応していません。画面は Mac の 1 ポイントあたり 1 ピクセルで受け取ります。
 - ディスプレイの接続・取り外しは、再接続するまで反映されません。
-- Intel Mac にはまだ対応していません。ビルド設定が Apple シリコン用の Homebrew のパス(`/opt/homebrew`)を前提にしています。
-- 完成したアプリは配布していません。ビルドしたアプリはその Mac にインストールされた FreeRDP を使うため、別の Mac にコピーしても動きません。
+- Intel Mac にはまだ対応していません。配布用ビルドは Apple シリコン(arm64)のみが対象です。
+- Apple の開発者証明書による署名・公証をしていないため、初回起動時に一度許可が必要です(インストールを参照)。
 
 ## トラブルシューティング
 
@@ -241,7 +205,9 @@ Mac へのインストール後、接続する Windows PC で一度だけ設定�
 | `Sources/PstscRDP/` | FreeRDP を包む C コード: 接続スレッド、RemoteApp のウィンドウ情報、ウィンドウごとの画面、入力、アイコン、通知 |
 | `Sources/PstscAgent/` | Mac アプリ本体(Swift/AppKit) |
 | `Sources/PstscDockProxy/` | アプリごとの Dock アイコンと Launchpad 起動用の補助アプリ |
-| `scripts/build-app.sh` | `Pstsc.app` のビルドとインストール |
+| `scripts/build-app.sh` | `Pstsc.app` のビルド(FreeRDP・OpenSSL 同梱)とインストール |
+| `scripts/build-freerdp.sh` | 同梱する FreeRDP と OpenSSL をソースからビルド(GPL コーデックなし、macOS 14 以降) |
+| `scripts/build-dmg.sh` | 配布用 DMG の作成 |
 | `scripts/test-remoteapp.sh` | xfreerdp で RemoteApp の動作だけを確認するスクリプト |
 | `remote/` | リモート PC に適用するレジストリファイル、テスト用 `.rdp` |
 | `docs/images/` | README のスクリーンショット |
@@ -254,3 +220,4 @@ Mac へのインストール後、接続する Windows PC で一度だけ設定�
 ## クレジット
 
 - [FreeRDP](https://github.com/FreeRDP/FreeRDP)(Apache License 2.0): RDP プロトコルの実装
+- [OpenSSL](https://www.openssl.org)(Apache License 2.0): TLS。どちらもアプリに同梱され、ライセンス全文は `Pstsc.app/Contents/Resources` にあります。

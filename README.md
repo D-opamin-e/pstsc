@@ -53,53 +53,24 @@ Parallels Desktop의 Coherence 모드처럼, 다른 곳에 있는 Windows PC의 
 
 | 구분 | 내용 |
 |---|---|
-| 맥 | **Apple Silicon**(M1 이상) 맥, macOS 14 이상. Intel 맥은 아직 지원하지 않습니다(아래 참고). |
-| 맥 계정 | `/Applications`에 설치하므로 관리자 계정 |
-| 개발 도구 | Xcode 명령줄 도구(Swift 6 이상), [Homebrew](https://brew.sh) |
-| 라이브러리 | FreeRDP 3.32 이상 (`brew install freerdp`) |
+| 맥 | **Apple Silicon**(M1 이상) 맥, macOS 14 이상. Intel 맥은 아직 지원하지 않습니다. |
 | 원격 PC | 원격 데스크톱을 켤 수 있는 Windows 10/11 **Pro** 이상 또는 Windows Server. Home 버전은 RDP 호스트가 될 수 없습니다. |
 
 ## 설치
 
-완성된 앱 파일은 아직 배포하지 않습니다. 소스를 받아서 **자기 맥에서 직접 빌드**해 설치합니다. 처음 한 번은 10분 정도 걸립니다.
+### DMG로 설치 (권장)
 
-### 1. Xcode 명령줄 도구 설치
+1. [Releases](https://github.com/D-opamin-e/pstsc/releases/latest)에서 `Pstsc-<버전>.dmg`를 받습니다.
+2. DMG를 열고 **Pstsc**를 오른쪽 **Applications(응용 프로그램)** 폴더로 끌어 놓습니다.
+3. 응용 프로그램 폴더에서 Pstsc를 실행합니다. Dock 아이콘을 우클릭 → 옵션 → **Dock에 유지**를 고르면 편합니다.
 
-터미널(응용 프로그램 → 유틸리티 → 터미널)을 열고 실행합니다. 창이 뜨면 **설치**를 누릅니다. Xcode 앱이 이미 설치되어 있으면 건너뛰어도 됩니다.
+필요한 라이브러리(FreeRDP, OpenSSL)는 앱 안에 들어 있어서 따로 설치할 것이 없습니다.
 
-```bash
-xcode-select --install
-```
-
-### 2. Homebrew 설치
-
-이미 있다면 건너뜁니다. 설치 중 맥 로그인 비밀번호를 물어봅니다.
+**처음 실행할 때 "확인할 수 없는 개발자" 경고가 나오면**: Pstsc는 Apple 개발자 인증서로 서명되어 있지 않습니다. 경고 창을 닫고 **시스템 설정 → 개인정보 보호 및 보안** 아래쪽의 **그래도 열기**를 누르면 됩니다. 터미널에서 아래 명령을 한 번 실행해도 됩니다.
 
 ```bash
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+xattr -dr com.apple.quarantine /Applications/Pstsc.app
 ```
-
-설치가 끝나면 화면 마지막에 나오는 안내(`Next steps`)대로 PATH 설정 명령 두 줄을 실행하고, 터미널을 새로 엽니다.
-
-### 3. FreeRDP 설치
-
-```bash
-brew install freerdp
-```
-
-### 4. Pstsc 받아서 설치
-
-```bash
-git clone https://github.com/D-opamin-e/pstsc.git
-cd pstsc
-scripts/build-app.sh
-```
-
-마지막에 `설치됨 / Installed / インストール完了: /Applications/Pstsc.app`이 나오면 성공입니다. 이 스크립트는 릴리스 빌드를 한 뒤 아이콘이 들어 있는 `Pstsc.app`을 만들어 응용 프로그램 폴더에 넣습니다.
-
-### 5. 실행
-
-응용 프로그램 폴더에서 **Pstsc**를 실행합니다. Dock 아이콘을 우클릭 → 옵션 → **Dock에 유지**를 고르면 편합니다. 자기 맥에서 빌드한 앱이라 "확인되지 않은 개발자" 경고는 뜨지 않습니다.
 
 처음 실행하면 macOS가 다음을 물어볼 수 있습니다. 모두 허용해야 해당 기능이 동작합니다.
 - 알림 허용: 원격 알림을 맥 알림으로 받기
@@ -108,13 +79,7 @@ scripts/build-app.sh
 
 ### 업데이트
 
-받은 폴더에서 최신 소스를 받고 다시 설치합니다. 실행 중인 Pstsc는 먼저 종료(⌘Q)하세요.
-
-```bash
-cd pstsc
-git pull
-scripts/build-app.sh
-```
+Pstsc를 종료(⌘Q)한 뒤 새 DMG로 같은 방법으로 설치합니다. "대치"를 고르면 됩니다. 설정과 저장한 비밀번호는 그대로 유지됩니다.
 
 ### 제거
 
@@ -126,22 +91,21 @@ rm -rf /Applications/Pstsc.app "$HOME/Applications/Pstsc 앱" \
 defaults delete com.pstsc.agent
 ```
 
-### 설치 중 문제가 생기면
+### 소스에서 빌드
 
-| 증상 | 해결 |
-|---|---|
-| `xcrun: error: invalid active developer path` | 1단계(`xcode-select --install`)를 다시 실행합니다. |
-| `brew: command not found` | 2단계 마지막의 PATH 설정을 하지 않은 경우입니다. 안내된 두 줄을 실행하고 터미널을 새로 엽니다. |
-| `'freerdp/...' file not found` 또는 `library 'freerdp3' not found` | FreeRDP가 없거나 Intel 맥입니다. `brew install freerdp`를 확인하세요. Intel 맥은 아직 지원하지 않습니다. |
-| `Permission denied` (Applications) | 관리자 계정이 아닙니다. 관리자 계정으로 실행하세요. |
-
-### 개발용 실행
-
-코드를 고치면서 바로 실행해 볼 때는 앱을 설치하지 않고 이렇게 실행합니다. Dock용 보조 실행 파일도 함께 빌드해야 해서 `swift build`를 먼저 합니다.
+직접 빌드하려면 Xcode 명령줄 도구(`xcode-select --install`)와 [Homebrew](https://brew.sh)가 필요합니다.
 
 ```bash
-swift build && swift run PstscAgent
+brew install cmake ninja
+git clone https://github.com/D-opamin-e/pstsc.git
+cd pstsc
+scripts/build-app.sh      # 빌드 후 /Applications/Pstsc.app에 설치
+scripts/build-dmg.sh      # 배포용 build/Pstsc-<버전>.dmg 만들기
 ```
+
+처음 빌드할 때는 `scripts/build-freerdp.sh`가 FreeRDP와 OpenSSL 소스를 받아 앱에 넣을 수 있게 빌드합니다(몇 분 걸림, `build/deps`에 저장). Homebrew의 `freerdp` 패키지는 쓰지 않습니다. 그 패키지에는 GPL 코덱(x264, x265)이 딸려 있어 함께 배포할 수 없고, 빌드한 macOS 버전에서만 실행되기 때문입니다.
+
+코드를 고치면서 바로 실행해 볼 때는 `swift build && swift run PstscAgent`를 씁니다. 이때도 `build/deps`가 먼저 있어야 하니 `scripts/build-freerdp.sh`를 한 번 실행해 두세요.
 
 ## 원격 PC 준비
 
@@ -225,8 +189,8 @@ swift build && swift run PstscAgent
 - Windows 11 창의 크기 조절 손잡이는 눈에 보이는 테두리 바깥에 있어서 잡히지 않을 수 있습니다.
 - 클립보드 공유, 원격 마우스 커서 모양, Retina 해상도는 아직 지원하지 않습니다. 화면은 맥 1포인트당 1픽셀로 받습니다.
 - 모니터를 연결하거나 뺀 경우 다시 연결해야 반영됩니다.
-- Intel 맥은 아직 지원하지 않습니다. 빌드 설정이 Apple Silicon용 Homebrew 경로(`/opt/homebrew`)를 기준으로 되어 있습니다.
-- 완성된 앱 파일은 배포하지 않습니다. 빌드한 앱은 그 맥에 설치된 FreeRDP를 사용하므로, 다른 맥에 복사해도 실행되지 않습니다.
+- Intel 맥은 아직 지원하지 않습니다. 배포용 빌드가 Apple Silicon(arm64)만 대상으로 합니다.
+- Apple 개발자 인증서로 서명·공증하지 않았습니다. 처음 실행할 때 위 설치 안내처럼 한 번 허용해야 합니다.
 
 ## 문제 해결
 
@@ -243,7 +207,9 @@ swift build && swift run PstscAgent
 | `Sources/PstscRDP/` | FreeRDP를 감싸는 C 코드: 연결 스레드, RemoteApp 창 정보, 창별 화면, 입력, 아이콘, 알림 |
 | `Sources/PstscAgent/` | 맥 앱 본체 (Swift/AppKit) |
 | `Sources/PstscDockProxy/` | 프로그램별 Dock 아이콘 겸 Launchpad 실행용 보조 앱 |
-| `scripts/build-app.sh` | `Pstsc.app` 빌드·설치 |
+| `scripts/build-app.sh` | `Pstsc.app` 빌드(FreeRDP·OpenSSL 포함)·설치 |
+| `scripts/build-freerdp.sh` | 앱에 넣을 FreeRDP와 OpenSSL을 소스에서 빌드 (GPL 코덱 제외, macOS 14 이상) |
+| `scripts/build-dmg.sh` | 배포용 DMG 만들기 |
 | `scripts/test-remoteapp.sh` | xfreerdp로 RemoteApp 동작만 따로 확인하는 스크립트 |
 | `remote/` | 원격 PC에 적용하는 레지스트리 파일, 테스트용 `.rdp` |
 | `docs/images/` | README 스크린샷 |
@@ -256,3 +222,4 @@ swift build && swift run PstscAgent
 ## 크레딧
 
 - [FreeRDP](https://github.com/FreeRDP/FreeRDP) (Apache License 2.0): RDP 프로토콜 구현
+- [OpenSSL](https://www.openssl.org) (Apache License 2.0): TLS. FreeRDP와 함께 앱 안에 들어 있고, 두 라이선스 전문은 `Pstsc.app/Contents/Resources`에 있습니다.

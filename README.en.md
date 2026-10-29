@@ -51,72 +51,37 @@ The Start menu is drawn by Pstsc on the Mac; Notepad and Calculator are running 
 
 | | |
 |---|---|
-| Mac | **Apple Silicon** (M1 or later), macOS 14 or later. Intel Macs are not supported yet (see below). |
-| Mac account | Administrator (the app installs into `/Applications`) |
-| Developer tools | Xcode Command Line Tools (Swift 6 or later), [Homebrew](https://brew.sh) |
-| Library | FreeRDP 3.32 or later (`brew install freerdp`) |
+| Mac | **Apple Silicon** (M1 or later), macOS 14 or later. Intel Macs are not supported yet. |
 | Remote PC | Windows 10/11 **Pro** or higher, or Windows Server, with Remote Desktop available. Home editions cannot be RDP hosts. |
 
 ## Installation
 
-There is no prebuilt app yet: you download the source and **build it on your own Mac**. The first time takes about 10 minutes.
+### Install from the DMG (recommended)
 
-### 1. Install the Xcode Command Line Tools
+1. Download `Pstsc-<version>.dmg` from [Releases](https://github.com/D-opamin-e/pstsc/releases/latest).
+2. Open the DMG and drag **Pstsc** onto the **Applications** folder on the right.
+3. Open Pstsc from Applications. Right-click its Dock icon → Options → **Keep in Dock** for easy access.
 
-Open Terminal (Applications → Utilities → Terminal) and run the following, then click **Install** in the window that appears. Skip this if Xcode is already installed.
+The libraries it needs (FreeRDP, OpenSSL) are inside the app, so there is nothing else to install.
 
-```bash
-xcode-select --install
-```
-
-### 2. Install Homebrew
-
-Skip if you already have it. It will ask for your Mac login password.
+**If macOS says it can't verify the developer on first launch**: Pstsc isn't signed with an Apple Developer certificate. Close the warning and click **Open Anyway** at the bottom of **System Settings → Privacy & Security**. Or run this once in Terminal:
 
 ```bash
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+xattr -dr com.apple.quarantine /Applications/Pstsc.app
 ```
 
-When it finishes, run the two PATH commands shown under `Next steps`, then open a new Terminal window.
-
-### 3. Install FreeRDP
-
-```bash
-brew install freerdp
-```
-
-### 4. Download and install Pstsc
-
-```bash
-git clone https://github.com/D-opamin-e/pstsc.git
-cd pstsc
-scripts/build-app.sh
-```
-
-It succeeded when the last line reads `설치됨 / Installed / インストール完了: /Applications/Pstsc.app`. The script makes a release build, packages `Pstsc.app` with its icon and puts it in your Applications folder.
-
-### 5. Run
-
-Open **Pstsc** from Applications. Right-click its Dock icon → Options → **Keep in Dock** for easy access. Because you built it yourself, there is no "unidentified developer" warning.
-
-On first launch macOS may ask for the following. Allow them for the related features to work:
+On first launch macOS may ask for the following. Allow them for the related features to work.
 - Notifications: remote notifications as Mac notifications
 - Keychain access: connecting automatically with the saved password
-- Desktop, Documents and Downloads folder access: when the remote PC opens the `Mac` drive
+- Desktop/Documents/Downloads access: when the remote PC opens the `Mac` drive
 
 ### Updating
 
-Quit Pstsc (⌘Q) first, then:
-
-```bash
-cd pstsc
-git pull
-scripts/build-app.sh
-```
+Quit Pstsc (⌘Q), then install the new DMG the same way and choose "Replace". Settings and the saved password are kept.
 
 ### Uninstalling
 
-Quit Pstsc, then remove the following. To remove the saved password, delete the `com.pstsc.agent` item in Keychain Access.
+Quit Pstsc, then delete the following. Remove the saved password in Keychain Access (item `com.pstsc.agent`).
 
 ```bash
 rm -rf /Applications/Pstsc.app "$HOME/Applications/Pstsc 앱" \
@@ -124,22 +89,21 @@ rm -rf /Applications/Pstsc.app "$HOME/Applications/Pstsc 앱" \
 defaults delete com.pstsc.agent
 ```
 
-### Installation problems
+### Building from source
 
-| Symptom | Fix |
-|---|---|
-| `xcrun: error: invalid active developer path` | Run step 1 (`xcode-select --install`) again. |
-| `brew: command not found` | The PATH setup at the end of step 2 was skipped. Run the two commands it showed and open a new Terminal. |
-| `'freerdp/...' file not found` or `library 'freerdp3' not found` | FreeRDP is missing, or this is an Intel Mac. Check `brew install freerdp`. Intel Macs are not supported yet. |
-| `Permission denied` (Applications) | Not an administrator account. Run it from an administrator account. |
-
-### Running during development
-
-To try code changes without installing the app (`swift build` comes first so the Dock helper binary is built too):
+You need the Xcode Command Line Tools (`xcode-select --install`) and [Homebrew](https://brew.sh).
 
 ```bash
-swift build && swift run PstscAgent
+brew install cmake ninja
+git clone https://github.com/D-opamin-e/pstsc.git
+cd pstsc
+scripts/build-app.sh      # build and install to /Applications/Pstsc.app
+scripts/build-dmg.sh      # make build/Pstsc-<version>.dmg for distribution
 ```
+
+On the first build, `scripts/build-freerdp.sh` downloads FreeRDP and OpenSSL and builds them for bundling (takes a few minutes, cached in `build/deps`). Homebrew's `freerdp` package isn't used: it pulls in GPL codecs (x264, x265) that can't be redistributed with Pstsc, and its libraries only run on the macOS version they were built for.
+
+For quick runs while editing code, use `swift build && swift run PstscAgent`. This also needs `build/deps`, so run `scripts/build-freerdp.sh` once first.
 
 ## Preparing the remote PC
 
@@ -223,8 +187,8 @@ Stated openly. All of it happens only inside the session Pstsc connects to.
 - The resize handles of Windows 11 windows sit outside the visible border and may not be grabbable.
 - Clipboard sharing, remote cursor shapes and Retina resolution are not supported yet. The screen is received at one pixel per Mac point.
 - Connecting or disconnecting a display takes effect after reconnecting.
-- Intel Macs are not supported yet: the build settings assume the Apple Silicon Homebrew path (`/opt/homebrew`).
-- No prebuilt app is distributed. A built app uses the FreeRDP installed on that Mac, so copying it to another Mac doesn't work.
+- Intel Macs are not supported yet: release builds target Apple Silicon (arm64) only.
+- The app isn't signed or notarized with an Apple Developer certificate, so it has to be allowed once on first launch (see Installation).
 
 ## Troubleshooting
 
@@ -241,7 +205,9 @@ Stated openly. All of it happens only inside the session Pstsc connects to.
 | `Sources/PstscRDP/` | C wrapper around FreeRDP: connection thread, RemoteApp window state, per-window frames, input, icons, notifications |
 | `Sources/PstscAgent/` | The Mac app (Swift/AppKit) |
 | `Sources/PstscDockProxy/` | Helper app for per-program Dock icons and Launchpad launchers |
-| `scripts/build-app.sh` | Builds and installs `Pstsc.app` |
+| `scripts/build-app.sh` | Builds `Pstsc.app` (with FreeRDP and OpenSSL) and installs it |
+| `scripts/build-freerdp.sh` | Builds the bundled FreeRDP and OpenSSL from source (no GPL codecs, macOS 14+) |
+| `scripts/build-dmg.sh` | Makes the DMG for distribution |
 | `scripts/test-remoteapp.sh` | Tests RemoteApp alone with xfreerdp |
 | `remote/` | Registry files for the remote PC, a test `.rdp` file |
 | `docs/images/` | README screenshots |
@@ -254,3 +220,4 @@ Stated openly. All of it happens only inside the session Pstsc connects to.
 ## Credits
 
 - [FreeRDP](https://github.com/FreeRDP/FreeRDP) (Apache License 2.0): RDP protocol implementation
+- [OpenSSL](https://www.openssl.org) (Apache License 2.0): TLS. Both ship inside the app; their license texts are in `Pstsc.app/Contents/Resources`.

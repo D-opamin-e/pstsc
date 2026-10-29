@@ -32,6 +32,12 @@ final class AppCatalog {
     private var host = ""
     private var pollTimer: Timer?
     private var iconTimer: Timer?
+    /// Seconds spent waiting for apps.json (0…exportTimeout). Kept across a reconnect to the same PC.
+    private var exportElapsed = 0
+    /// Highest list-wait percent shown, so a reconnect never draws a lower number.
+    private var listFloor = 0
+    private static let exportTimeout = 60
+    private static let iconsDoneFile = sharedFolder.appendingPathComponent("icons.done")
 
     init() {
         try? FileManager.default.createDirectory(at: Self.sharedFolder, withIntermediateDirectories: true)
@@ -46,19 +52,24 @@ final class AppCatalog {
 
     /// Call before each connection. Switches to the given PC: shows that PC's cached apps (or none)
     /// and removes the previous PC's export so a stale file is never mistaken for this PC's list.
-    func beginConnection(host: String) {
+    func beginConnection(host: String, resetProgress: Bool = true) {
+        let sameHost = !self.host.isEmpty && self.host.caseInsensitiveCompare(host) == .orderedSame
         self.host = host
         pollTimer?.invalidate()
         iconTimer?.invalidate()
+        if resetProgress || !sameHost {
+            exportElapsed = 0
+            listFloor = 0
+        }
         if let data = try? Data(contentsOf: Self.cacheFile(for: host)),
            let cached = try? JSONDecoder().decode([RemoteApp].self, from: data) {
             apps = cached
-        } else {
+        } else if !sameHost {
             apps = []
         }
         // Drop the previous connection's export; this PC's helper writes a fresh one.
         try? FileManager.default.removeItem(at: Self.exportFile)
-        try? FileManager.default.removeItem(at: Self.sharedFolder.appendingPathComponent("icons.done"))
+        try? FileManager.default.removeItem(at: Self.iconsDoneFile)
         onChange?()
     }
 
@@ -257,19 +268,31 @@ final class AppCatalog {
     func watchForExport() {
         pollTimer?.invalidate()
         let started = Date()
-        var elapsed = 0
+        var waited = 0
+        onIconsProgress?()
         pollTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] timer in
             guard let self else { timer.invalidate(); return }
-            elapsed += 1
+            waited += 1
+            self.exportElapsed = min(Self.exportTimeout - 1, self.exportElapsed + 1)
             if let modified = try? Self.exportFile.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate,
                modified >= started.addingTimeInterval(-2), self.loadExport() {
                 timer.invalidate()
                 self.watchForIcons(since: started)
-            } else if elapsed >= 60 {
+            } else if waited >= Self.exportTimeout {
                 FileHandle.standardError.write(Data("[pstsc] app list export did not arrive\n".utf8))
                 timer.invalidate()
             }
+            self.onIconsProgress?()
         }
+    }
+
+    /// 0–99 while still waiting for the remote app list; nil once there is a list to show, or
+    /// before the helper was launched (nothing to measure yet).
+    func listWaitPercent() -> Int? {
+        guard apps.isEmpty, pollTimer?.isValid == true || exportElapsed > 0 else { return nil }
+        let percent = min(99, exportElapsed * 100 / Self.exportTimeout)
+        listFloor = max(listFloor, percent)
+        return listFloor
     }
 
     /// Icons take a while (one per app, only missing ones); poll for icons.done for up to 5 minutes,
@@ -294,8 +317,11 @@ final class AppCatalog {
     }
 
     /// How many of the current apps already have an icon on the Mac, out of the total.
-    /// nil while the app list hasn't arrived or once every icon is in.
+    /// nil while the app list hasn't arrived, or once the helper has finished (some apps have no
+    /// extractable icon, so "every icon present" may never happen).
     func iconProgress() -> (done: Int, total: Int)? {
+        guard iconTimer?.isValid == true,
+              !FileManager.default.fileExists(atPath: Self.iconsDoneFile.path) else { return nil }
         let total = apps.count
         guard total > 0 else { return nil }
         let folder = Self.sharedFolder.appendingPathComponent("icons", isDirectory: true)

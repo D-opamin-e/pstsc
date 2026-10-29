@@ -351,14 +351,18 @@ final class StartMenuController: NSWindowController, NSTextFieldDelegate, NSTabl
         }
     }
 
-    /// Shows "getting the app list…" until it arrives, then an icon-download percentage, then hides.
+    /// Shows "getting the app list…" with a wait percentage until it arrives, then an
+    /// icon-download percentage, then hides.
     private func updateLoadingLabel() {
-        if catalog.apps.isEmpty {
-            loadingLabel.stringValue = L("원격 PC에서 앱 목록을 받아오는 중입니다…")
+        if let percent = catalog.listWaitPercent() {
+            loadingLabel.stringValue = L("원격 PC에서 앱 목록을 받아오는 중입니다… %d%%", Int32(percent))
             loadingLabel.superview?.isHidden = false
         } else if let p = catalog.iconProgress() {
             let percent = Int(Double(p.done) / Double(p.total) * 100)
             loadingLabel.stringValue = L("앱 아이콘 받는 중… %d%% (%d/%d)", Int32(percent), Int32(p.done), Int32(p.total))
+            loadingLabel.superview?.isHidden = false
+        } else if catalog.apps.isEmpty {
+            loadingLabel.stringValue = L("원격 PC에 연결하는 중입니다…")
             loadingLabel.superview?.isHidden = false
         } else {
             loadingLabel.superview?.isHidden = true

@@ -346,7 +346,12 @@ final class RDPSession {
 
     func command(windowId: UInt32, _ command: UInt16) { pstsc_window_command(client, windowId, command) }
 
+    /// Arguments of the last launch per program, so a launch the server refused as "not ready yet"
+    /// can be sent again (the server only reports the program, not its arguments).
+    private(set) var lastArguments: [String: String] = [:]
+
     func launch(program: String, arguments: String = "") {
+        lastArguments[program.lowercased()] = arguments
         program.withCString { program in
             arguments.withCString { args in
                 pstsc_exec(client, program, arguments.isEmpty ? nil : args)

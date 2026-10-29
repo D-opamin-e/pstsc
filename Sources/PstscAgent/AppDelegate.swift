@@ -27,10 +27,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate, RDPSessionDelegate, NS
     /// Consecutive connections that logged off before the RemoteApp session ever became ready.
     /// Two in a row means the remote PC isn't set up for RemoteApp, not a transient drop.
     private var earlyLogoffs = 0
+    /// Launches re-sent this connection because the server's RemoteApp shell wasn't ready yet.
+    private var launchRetries = 0
+    /// Connected in desktop mode only to sign the existing session out, then reconnect in app mode.
+    private var signingOutForApps = false
+    /// When this connection became ready; a logoff soon after still counts as a failed start.
+    private var readyAt = Date.distantPast
     private var reconnectAttempts = 0
     /// Set when the user signs out of / shuts down the remote PC from the power menu: no auto-reconnect.
     private var userEndedRemoteSession = false
     private var reconnectWork: DispatchWorkItem?
+    private var connectProgressTimer: Timer?
+    private var connectElapsed = 0
+    private var resumingConnection = false
+    /// `swift run` has no .app bundle; UNUserNotificationCenter crashes in that case.
+    private var notificationsEnabled = false
 
     private let connectWindow = ConnectWindowController()
     private let catalog = AppCatalog()
@@ -70,17 +81,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate, RDPSessionDelegate, NS
             guard let self, self.credentials != nil else { return }
             self.connect(mode: .desktop)
         }
+        connectWindow.onSignOutAndConnect = { [weak self] in
+            guard let self, self.credentials != nil else { return }
+            self.signingOutForApps = true
+            self.connect(mode: .desktop)
+        }
         catalog.onChange = { [weak self] in
             guard let self else { return }
             self.startMenu.reload()
             self.launchers.sync(apps: self.catalog.apps)
+            self.updateLoadingStatus()
         }
         catalog.onIconsChange = { [weak self] in
             guard let self else { return }
             self.startMenu.reload()
             self.launchers.sync(apps: self.catalog.apps)
+            self.updateLoadingStatus()
         }
-        catalog.onIconsProgress = { [weak self] in self?.startMenu.reload() }
+        catalog.onIconsProgress = { [weak self] in
+            self?.startMenu.reload()
+            self?.updateLoadingStatus()
+        }
         startMenu.onLaunch = { [weak self] app in self?.launch(app) }
         startMenu.onPower = { [weak self] action in self?.perform(action) }
         setUpProgramDock()
@@ -133,6 +154,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, RDPSessionDelegate, NS
     // MARK: Notifications
 
     private func setUpNotifications() {
+        guard Bundle.main.bundleURL.pathExtension == "app" else { return }
+        notificationsEnabled = true
         let center = UNUserNotificationCenter.current()
         center.delegate = self
         center.requestAuthorization(options: [.alert, .sound]) { _, _ in }
@@ -140,7 +163,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, RDPSessionDelegate, NS
 
     /// Balloon tips from remote tray icons appear as Mac notifications.
     func session(_ session: RDPSession, trayBalloonFrom windowId: UInt32, iconId: UInt32, title: String, text: String) {
-        guard session === self.session else { return }
+        guard session === self.session, notificationsEnabled else { return }
         let content = UNMutableNotificationContent()
         content.title = title.isEmpty ? "Windows" : title
         content.body = text
@@ -182,7 +205,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, RDPSessionDelegate, NS
         let work = DispatchWorkItem { [weak self] in
             guard let self, self.credentials != nil, self.session == nil else { return }
             self.reconnectWork = nil
-            self.connect(mode: self.mode)
+            self.connect(mode: self.mode, resuming: true)
         }
         reconnectWork = work
         DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: work)
@@ -329,13 +352,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, RDPSessionDelegate, NS
 
     // MARK: Connection
 
-    private func connect(mode newMode: Mode) {
+    private func connect(mode newMode: Mode, resuming: Bool = false) {
         guard let credentials, let screen = NSScreen.screens.first else { return }
         tearDownSession()
         // Switch the Start menu to this PC: show its cached apps (or none), never the last PC's.
-        catalog.beginConnection(host: credentials.host)
+        // A reconnect keeps the loading percent; a new attempt starts it over.
+        catalog.beginConnection(host: credentials.host, resetProgress: !resuming)
+        self.resumingConnection = resuming
+        // Leaving desktop mode for apps (e.g. closing the desktop window) ends a pending sign-out.
+        if newMode == .apps { signingOutForApps = false }
         mode = newMode
         ready = false
+        launchRetries = 0
 
         let session = RDPSession()
         session.delegate = self
@@ -394,7 +422,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, RDPSessionDelegate, NS
             options.userDrivePath = FileManager.default.homeDirectoryForCurrentUser.path
         }
 
-        connectWindow.setBusy(true, status: L("연결 중…"))
+        startConnectProgress()
         updateModeMenuTitle()
         if !session.connect(options) {
             tearDownSession()
@@ -403,7 +431,33 @@ final class AppDelegate: NSObject, NSApplicationDelegate, RDPSessionDelegate, NS
         }
     }
 
+    private func startConnectProgress() {
+        connectProgressTimer?.invalidate()
+        if !resumingConnection { connectElapsed = 0 }
+        resumingConnection = false
+        connectWindow.setBusy(true, status: L("연결 중… %d%%", Int32(min(90, connectElapsed * 5))))
+        connectProgressTimer = Timer.scheduledTimer(withTimeInterval: 0.4, repeats: true) { [weak self] _ in
+            guard let self, self.session != nil, !self.ready else { return }
+            self.connectElapsed += 1
+            let percent = min(90, self.connectElapsed * 5)
+            self.connectWindow.setBusy(true, status: L("연결 중… %d%%", Int32(percent)))
+        }
+    }
+
+    private func stopConnectProgress() {
+        connectProgressTimer?.invalidate()
+        connectProgressTimer = nil
+    }
+
+    /// Hides the connect window once the Start menu is showing loading progress.
+    private func updateLoadingStatus() {
+        stopConnectProgress()
+        guard mode == .apps, session != nil else { return }
+        connectWindow.window?.orderOut(nil)
+    }
+
     private func tearDownSession() {
+        stopConnectProgress()
         let old = session
         session = nil
         old?.delegate = nil
@@ -439,10 +493,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, RDPSessionDelegate, NS
 
     func sessionDidConnect(_ session: RDPSession) {
         guard session === self.session else { return }
-        connectWindow.setBusy(false, status: L("연결됨"))
-        connectWindow.window?.orderOut(nil)
-        if mode == .desktop {
+        if mode == .desktop && signingOutForApps {
+            // Show the taken-over session so the user can save their work and sign out
+            // (Start > Sign out). The logoff is detected in didDisconnect, which reconnects in app mode.
+            connectWindow.setBusy(true, status: L("원격 화면에서 저장할 것을 저장한 뒤 시작 → 로그아웃을 누르세요. 로그아웃되면 앱 창 모드로 자동 연결합니다."))
             desktopWindow?.present()
+        } else if mode == .desktop {
+            connectWindow.setBusy(false, status: L("연결됨"))
+            connectWindow.window?.orderOut(nil)
+            desktopWindow?.present()
+        } else {
+            connectWindow.setBusy(true, status: L("연결됨, 원격 앱 준비 중…"))
         }
     }
 
@@ -464,7 +525,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, RDPSessionDelegate, NS
         guard session === self.session else { return }
         ready = true
         hasBeenReady = true
-        earlyLogoffs = 0
+        readyAt = Date()
         stopReconnecting()
         if rememberOnSuccess, let credentials {
             CredentialStore.remember(credentials)
@@ -472,6 +533,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, RDPSessionDelegate, NS
             updateToggleItems()
         }
         catalog.watchForExport()
+        if mode == .apps {
+            startMenu.userName = credentials?.username ?? ""
+            startMenu.isDesktopMode = false
+            if startMenu.window?.isVisible == true {
+                startMenu.reload()
+            } else {
+                startMenu.present()
+            }
+            updateLoadingStatus()
+        }
         if let app = pendingLaunch {
             pendingLaunch = nil
             session.launch(appID: app.appID)
@@ -483,16 +554,37 @@ final class AppDelegate: NSObject, NSApplicationDelegate, RDPSessionDelegate, NS
         tearDownSession()
         FileHandle.standardError.write(Data("[pstsc] disconnected: \(reason) \(message ?? "")\n".utf8))
 
-        // A logoff before this connection ever became ready (not reset by a successful ready) means
-        // the RemoteApp session can't start. Twice in a row = the remote PC isn't set up for
+        if signingOutForApps {
+            signingOutForApps = false
+            if reason == .loggedOff {
+                // The old session is gone: a fresh app-mode session can start now.
+                earlyLogoffs = 0
+                connectWindow.setBusy(true, status: L("연결 중… %d%%", Int32(0)))
+                DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in
+                    guard let self, self.session == nil, self.credentials != nil else { return }
+                    self.connect(mode: .apps)
+                }
+            } else {
+                connectWindow.offerDesktopMode(status: L("기존 세션을 로그아웃하지 못했습니다. 원격 PC에서 직접 로그아웃한 뒤 다시 연결하세요."))
+                connectWindow.showWindow(nil)
+                NSApp.activate()
+            }
+            return
+        }
+
+        // A logoff before this connection became ready, or within a minute of it, means the
+        // RemoteApp session can't stay up. Three in a row = the remote PC isn't set up for
         // RemoteApp (enable-remoteapp.reg not applied, or applied without a restart); stop looping.
-        if reason == .loggedOff && !ready && mode == .apps && !userEndedRemoteSession {
-            earlyLogoffs += 1
-            if earlyLogoffs >= 2 {
+        let earlyLogoff = !ready || Date().timeIntervalSince(readyAt) < 60
+        if reason == .loggedOff && mode == .apps && !userEndedRemoteSession {
+            earlyLogoffs = earlyLogoff ? earlyLogoffs + 1 : 0
+            if earlyLogoffs >= 3 {
                 earlyLogoffs = 0
                 stopReconnecting()
                 pendingLaunch = nil
-                connectWindow.setBusy(false, status: L("이 원격 PC는 아직 Pstsc 연결 준비가 되어 있지 않습니다. 저장소의 enable-remoteapp.reg를 원격 PC에서 실행하고 재시작한 뒤 다시 연결하세요."))
+                // Most often the same account already has a desktop session (at the PC or from
+                // another RDP client): Windows can't attach RemoteApp to it and logs off (code 12).
+                connectWindow.offerDesktopMode(status: L("원격 PC가 앱 창 연결을 거부했습니다. 같은 계정이 PC 앞이나 다른 원격 데스크톱에서 로그인돼 있으면 로그아웃한 뒤 다시 연결하거나, 데스크톱 모드로 넘겨받으세요. 처음 쓰는 PC라면 enable-remoteapp.reg 적용 후 재시작하세요."))
                 connectWindow.showWindow(nil)
                 NSApp.activate()
                 return
@@ -546,10 +638,34 @@ final class AppDelegate: NSObject, NSApplicationDelegate, RDPSessionDelegate, NS
 
     func session(_ session: RDPSession, failedToLaunch program: String, code: UInt16) {
         guard session === self.session else { return }
+        let lower = program.lowercased()
+        let isHelper = lower.contains("conhost.exe") || lower.contains("powershell.exe")
 
-        // The helper (conhost.exe) failing means the remote PC isn't set up for RemoteApp; a
-        // user-launched program failing is usually a bad path. Code 3 = not in the allow list.
-        let isHelper = program.lowercased().contains("conhost.exe")
+        // Code 1 (HOOK_NOT_LOADED): the session's RemoteApp shell isn't up yet, typically right
+        // after logon. Send the same launch again shortly instead of reporting an error.
+        if code == 1, launchRetries < 15 {
+            launchRetries += 1
+            let arguments = isHelper ? AppCatalog.helperArguments : (session.lastArguments[lower] ?? "")
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self, weak session] in
+                guard let self, let session, session === self.session else { return }
+                session.launch(program: program, arguments: arguments)
+            }
+            return
+        }
+        // Still code 1 after retrying: we landed in a regular desktop session (the same account is
+        // signed in at the PC or from another remote desktop), where RemoteApp can't run.
+        if code == 1 {
+            tearDownSession()
+            stopReconnecting()
+            pendingLaunch = nil
+            connectWindow.offerDesktopMode(status: L("원격 PC가 앱 창 연결을 거부했습니다. 같은 계정이 PC 앞이나 다른 원격 데스크톱에서 로그인돼 있으면 로그아웃한 뒤 다시 연결하거나, 데스크톱 모드로 넘겨받으세요. 처음 쓰는 PC라면 enable-remoteapp.reg 적용 후 재시작하세요."))
+            connectWindow.showWindow(nil)
+            NSApp.activate()
+            return
+        }
+
+        // The helper failing means the remote PC isn't set up for RemoteApp; a user-launched
+        // program failing is usually a bad path. Code 3 = not in the allow list.
         if isHelper {
             tearDownSession()
             connectWindow.setBusy(false, status: L("이 원격 PC는 아직 Pstsc 연결 준비가 되어 있지 않습니다. 저장소의 enable-remoteapp.reg를 원격 PC에서 실행하고 재시작한 뒤 다시 연결하세요."))

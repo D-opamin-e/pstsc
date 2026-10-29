@@ -47,7 +47,9 @@ private enum Translations {
         "주소, 사용자, 비밀번호를 모두 입력하세요.": (
             "Enter the address, user and password.", "アドレス、ユーザー、パスワードをすべて入力してください。"),
         "연결 중…": ("Connecting…", "接続中…"),
+        "연결 중… %d%%": ("Connecting… %d%%", "接続中… %d%%"),
         "연결됨": ("Connected", "接続済み"),
+        "연결됨, 원격 앱 준비 중…": ("Connected, preparing remote apps…", "接続済み、リモートアプリを準備しています…"),
         "연결 설정을 만들지 못했습니다. 주소 형식을 확인하세요.": (
             "Couldn't set up the connection. Check the address format.",
             "接続を設定できませんでした。アドレスの形式を確認してください。"),
@@ -107,6 +109,9 @@ private enum Translations {
             "再び電源を入れるまで、リモート PC に接続できなくなります。"),
         "프로그램을 실행하지 못했습니다": ("Couldn't start the program", "プログラムを起動できませんでした"),
         "%@\n오류 코드: %d\n%@": ("%@\nError code: %d\n%@", "%@\nエラーコード: %d\n%@"),
+        "원격 PC가 앱 창 연결을 거부했습니다. 같은 계정이 PC 앞이나 다른 원격 데스크톱에서 로그인돼 있으면 로그아웃한 뒤 다시 연결하거나, 데스크톱 모드로 넘겨받으세요. 처음 쓰는 PC라면 enable-remoteapp.reg 적용 후 재시작하세요.": (
+            "The remote PC refused the app-window connection. If the same account is signed in at the PC or from another remote desktop, sign out there and reconnect, or take it over in desktop mode. On a new PC, apply enable-remoteapp.reg and restart.",
+            "リモート PC がアプリウィンドウ接続を拒否しました。同じアカウントが PC の前や別のリモートデスクトップでサインインしている場合は、サインアウトしてから再接続するか、デスクトップモードで引き継いでください。初めての PC では enable-remoteapp.reg を適用して再起動してください。"),
         "이 원격 PC는 아직 Pstsc 연결 준비가 되어 있지 않습니다. 저장소의 enable-remoteapp.reg를 원격 PC에서 실행하고 재시작한 뒤 다시 연결하세요.": (
             "This remote PC isn't set up for Pstsc yet. Run enable-remoteapp.reg from the repository on the remote PC, restart it, then connect again.",
             "このリモート PC はまだ Pstsc 接続の準備ができていません。リポジトリの enable-remoteapp.reg をリモート PC で実行し、再起動してから再接続してください。"),
@@ -146,8 +151,23 @@ private enum Translations {
         "모든 앱": ("All apps", "すべてのアプリ"),
         "검색 결과": ("Search results", "検索結果"),
         "'%@'에 대한 결과가 없습니다": ("No results for '%@'", "「%@」の検索結果はありません"),
-        "원격 PC에서 앱 목록을 받아오는 중입니다…": (
-            "Getting the app list from the remote PC…", "リモート PC からアプリの一覧を取得しています…"),
+        "원격 PC에서 앱 목록을 받아오는 중입니다… %d%%": (
+            "Getting the app list from the remote PC… %d%%", "リモート PC からアプリの一覧を取得しています… %d%%"),
+        "기존 세션 로그아웃 후 연결": ("Sign Out Session and Connect", "既存セッションをサインアウトして接続"),
+        "원격 PC의 기존 세션을 로그아웃할까요?": (
+            "Sign out the existing session on the remote PC?", "リモート PC の既存セッションをサインアウトしますか?"),
+        "원격 PC의 기존 세션을 화면에 띄웁니다. 저장할 것을 저장한 뒤 시작 → 로그아웃을 누르면 앱 창 모드로 다시 연결합니다. 로그아웃하면 그 세션의 프로그램은 모두 닫힙니다.": (
+            "Pstsc shows the existing session on the remote PC. Save your work and choose Start → Sign out; Pstsc then reconnects in app mode. Signing out closes every program in that session.",
+            "リモート PC の既存セッションを表示します。保存してからスタート → サインアウトを選ぶと、アプリウィンドウモードで再接続します。サインアウトするとそのセッションのプログラムはすべて閉じます。"),
+        "계속": ("Continue", "続行"),
+        "기존 세션을 로그아웃하지 못했습니다. 원격 PC에서 직접 로그아웃한 뒤 다시 연결하세요.": (
+            "Couldn't sign out the existing session. Sign out on the remote PC yourself, then connect again.",
+            "既存セッションをサインアウトできませんでした。リモート PC で直接サインアウトしてから再接続してください。"),
+        "원격 화면에서 저장할 것을 저장한 뒤 시작 → 로그아웃을 누르세요. 로그아웃되면 앱 창 모드로 자동 연결합니다.": (
+            "Save your work on the remote screen, then choose Start → Sign out. Pstsc reconnects in app mode once you're signed out.",
+            "リモート画面で必要なものを保存してから、スタート → サインアウトを選んでください。サインアウトするとアプリウィンドウモードで自動接続します。"),
+        "원격 PC에 연결하는 중입니다…": (
+            "Connecting to the remote PC…", "リモート PC に接続しています…"),
         "앱 아이콘 받는 중… %d%% (%d/%d)": (
             "Getting app icons… %d%% (%d/%d)", "アプリのアイコンを取得中… %d%%(%d/%d)"),
         "고정된 앱이 없습니다. '모두'에서 앱을 우클릭해 고정하세요.": (

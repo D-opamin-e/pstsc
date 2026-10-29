@@ -12,12 +12,15 @@ final class ConnectWindowController: NSWindowController {
     var onConnect: ((Credentials, _ remember: Bool) -> Void)?
     /// Retry the last connection in desktop mode (takes over an in-use session).
     var onConnectDesktop: (() -> Void)?
+    /// Sign out the account's existing session on the remote PC, then connect in app mode.
+    var onSignOutAndConnect: (() -> Void)?
 
     private let hostField = NSTextField()
     private let userField = NSTextField()
     private let passwordField = NSSecureTextField()
     private let statusLabel = NSTextField(labelWithString: "")
     private let desktopButton = NSButton(title: L("데스크톱 모드로 접속"), target: nil, action: nil)
+    private let signOutButton = NSButton(title: L("기존 세션 로그아웃 후 연결"), target: nil, action: nil)
     private let connectButton = NSButton(title: L("연결"), target: nil, action: nil)
     private let rememberBox = NSButton(checkboxWithTitle: L("비밀번호를 키체인에 저장하고 다음부터 자동 연결"), target: nil, action: nil)
 
@@ -27,7 +30,7 @@ final class ConnectWindowController: NSWindowController {
     }
 
     init() {
-        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 460, height: 230),
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 620, height: 230),
                               styleMask: [.titled, .closable], backing: .buffered, defer: false)
         window.title = L("Pstsc — 원격 PC 연결")
         super.init(window: window)
@@ -40,7 +43,7 @@ final class ConnectWindowController: NSWindowController {
 
         statusLabel.textColor = .secondaryLabelColor
         statusLabel.lineBreakMode = .byWordWrapping
-        statusLabel.maximumNumberOfLines = 2
+        statusLabel.maximumNumberOfLines = 5
 
         connectButton.target = self
         connectButton.action = #selector(connect)
@@ -51,6 +54,11 @@ final class ConnectWindowController: NSWindowController {
         desktopButton.action = #selector(connectDesktop)
         desktopButton.bezelStyle = .push
         desktopButton.isHidden = true
+
+        signOutButton.target = self
+        signOutButton.action = #selector(signOutAndConnect)
+        signOutButton.bezelStyle = .push
+        signOutButton.isHidden = true
 
         let grid = NSGridView(views: [
             [NSTextField(labelWithString: L("원격 PC 주소")), hostField],
@@ -64,7 +72,7 @@ final class ConnectWindowController: NSWindowController {
         grid.columnSpacing = 10
         grid.column(at: 1).width = 300
 
-        let buttons = NSStackView(views: [statusLabel, desktopButton, connectButton])
+        let buttons = NSStackView(views: [statusLabel, signOutButton, desktopButton, connectButton])
         buttons.orientation = .horizontal
         buttons.distribution = .fill
         statusLabel.setContentHuggingPriority(.defaultLow, for: .horizontal)
@@ -96,6 +104,7 @@ final class ConnectWindowController: NSWindowController {
         connectButton.isEnabled = !busy
         statusLabel.stringValue = status
         desktopButton.isHidden = true
+        signOutButton.isHidden = true
     }
 
     /// Shows a status plus a "connect in desktop mode" button (e.g. a session is already in use).
@@ -103,6 +112,7 @@ final class ConnectWindowController: NSWindowController {
         connectButton.isEnabled = true
         statusLabel.stringValue = status
         desktopButton.isHidden = false
+        signOutButton.isHidden = false
     }
 
     @objc private func connect() {
@@ -119,8 +129,23 @@ final class ConnectWindowController: NSWindowController {
 
         let credentials = Credentials(host: host, username: user, password: passwordField.stringValue)
         passwordField.stringValue = ""
-        setBusy(true, status: L("연결 중…"))
+        setBusy(true, status: L("연결 중… %d%%", Int32(0)))
         onConnect?(credentials, rememberBox.state == .on)
+    }
+
+    @objc private func signOutAndConnect() {
+        guard let window else { return }
+        let alert = NSAlert()
+        alert.alertStyle = .warning
+        alert.messageText = L("원격 PC의 기존 세션을 로그아웃할까요?")
+        alert.informativeText = L("원격 PC의 기존 세션을 화면에 띄웁니다. 저장할 것을 저장한 뒤 시작 → 로그아웃을 누르면 앱 창 모드로 다시 연결합니다. 로그아웃하면 그 세션의 프로그램은 모두 닫힙니다.")
+        alert.addButton(withTitle: L("계속"))
+        alert.addButton(withTitle: L("취소"))
+        alert.beginSheetModal(for: window) { [weak self] response in
+            guard let self, response == .alertFirstButtonReturn else { return }
+            self.setBusy(true, status: L("데스크톱 모드로 연결 중…"))
+            self.onSignOutAndConnect?()
+        }
     }
 
     @objc private func connectDesktop() {

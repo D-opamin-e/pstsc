@@ -25,7 +25,10 @@ final class RemoteAppWindow: NSWindow {
 
         isReleasedWhenClosed = false
         acceptsMouseMovedEvents = true
-        backgroundColor = .black
+        // Clear, not black: the server announces a new size before the resized surface arrives, and
+        // the part the surface doesn't cover yet would otherwise show as a black bar at the edge.
+        isOpaque = false
+        backgroundColor = .clear
         hasShadow = true
         contentView = remoteView
         update(info)
@@ -40,8 +43,6 @@ final class RemoteAppWindow: NSWindow {
         self.info = info
         title = info.title
         level = info.isPopup ? .popUpMenu : .normal
-        isOpaque = !info.isLayered
-        backgroundColor = info.isLayered ? .clear : .black
         hasShadow = !info.isLayered
         if isLocallyMoving { return }
         if let reported = reportedFrame {

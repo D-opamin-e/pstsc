@@ -29,6 +29,11 @@ struct RemoteWindowInfo {
     private static let wsAppFrame: UInt32 = 0x0008_0000 | 0x0004_0000 | 0x0002_0000 | 0x0001_0000
     private static let wsExToolWindow: UInt32 = 0x0000_0080
     private static let wsExAppWindow: UInt32 = 0x0004_0000
+    private static let wsExLayered: UInt32 = 0x0008_0000
+
+    /// Layered windows (menu drop shadows, fading popups) have per-pixel alpha; drawn opaque they
+    /// turn into black boxes over the window below.
+    var isLayered: Bool { extendedStyle & Self.wsExLayered != 0 }
 
     /// Menus, tooltips and similar: must never take focus or the remote closes them.
     /// Apps that draw their own title bar (KakaoTalk, Steam) are WS_POPUP too, but keep
@@ -100,8 +105,9 @@ final class FrameStore: @unchecked Sendable {
         }
     }
 
-    /// Copies the given desktop rectangle into a standalone image.
-    func image(of rect: CGRect) -> CGImage? {
+    /// Copies the given desktop rectangle into a standalone image. alpha: the pixels carry per-pixel
+    /// alpha (GFX ARGB surfaces of layered windows such as menu shadows); otherwise the 4th byte is unused.
+    func image(of rect: CGRect, alpha: Bool = false) -> CGImage? {
         lock.lock()
         defer { lock.unlock() }
 
@@ -119,8 +125,9 @@ final class FrameStore: @unchecked Sendable {
             }
         }
         guard let provider = CGDataProvider(data: data as CFData) else { return nil }
-        // FreeRDP BGRX32 == little-endian XRGB
-        let info = CGBitmapInfo(rawValue: CGImageAlphaInfo.noneSkipFirst.rawValue | CGBitmapInfo.byteOrder32Little.rawValue)
+        // FreeRDP BGRX32/BGRA32 == little-endian XRGB/ARGB
+        let alphaInfo: CGImageAlphaInfo = alpha ? .first : .noneSkipFirst
+        let info = CGBitmapInfo(rawValue: alphaInfo.rawValue | CGBitmapInfo.byteOrder32Little.rawValue)
         return CGImage(width: w, height: h, bitsPerComponent: 8, bitsPerPixel: 32, bytesPerRow: rowBytes,
                        space: colorSpace, bitmapInfo: info, provider: provider, decode: nil,
                        shouldInterpolate: false, intent: .defaultIntent)

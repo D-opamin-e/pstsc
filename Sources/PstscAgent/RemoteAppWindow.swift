@@ -40,6 +40,9 @@ final class RemoteAppWindow: NSWindow {
         self.info = info
         title = info.title
         level = info.isPopup ? .popUpMenu : .normal
+        isOpaque = !info.isLayered
+        backgroundColor = info.isLayered ? .clear : .black
+        hasShadow = !info.isLayered
         if isLocallyMoving { return }
         if let reported = reportedFrame {
             if info.frame == reported.frame || Date() > reported.until {
@@ -95,7 +98,7 @@ final class RemoteAppWindow: NSWindow {
     /// Uses the window's own GFX surface when the server sends one, else the shared desktop framebuffer.
     func refresh(from session: RDPSession) {
         if let surface = session.surface(for: remoteId) {
-            remoteView.show(surface.image(of: info.surfaceCrop))
+            remoteView.show(surface.image(of: info.surfaceCrop, alpha: info.isLayered))
         } else {
             remoteView.show(session.frames.image(of: info.frame))
         }

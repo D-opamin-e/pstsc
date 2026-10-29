@@ -100,6 +100,17 @@ final class ConnectWindowController: NSWindowController {
 
     required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
 
+    /// Opens the form for connecting to another PC (or with another account): the last address and
+    /// user are filled in, the password is asked again. The current connection stays until Connect.
+    func prepareForNewConnection(connected: Bool) {
+        let defaults = UserDefaults.standard
+        hostField.stringValue = defaults.string(forKey: Key.host) ?? ""
+        userField.stringValue = defaults.string(forKey: Key.user) ?? ""
+        passwordField.stringValue = ""
+        setBusy(false, status: connected ? L("연결을 누르면 지금 연결이 끊기고 새 PC로 연결합니다.") : "")
+        window?.makeFirstResponder(hostField)
+    }
+
     func setBusy(_ busy: Bool, status: String) {
         connectButton.isEnabled = !busy
         statusLabel.stringValue = status

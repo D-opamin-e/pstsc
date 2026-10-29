@@ -166,6 +166,10 @@ private enum Translations {
         "원격 화면에서 저장할 것을 저장한 뒤 시작 → 로그아웃을 누르세요. 로그아웃되면 앱 창 모드로 자동 연결합니다.": (
             "Save your work on the remote screen, then choose Start → Sign out. Pstsc reconnects in app mode once you're signed out.",
             "リモート画面で必要なものを保存してから、スタート → サインアウトを選んでください。サインアウトするとアプリウィンドウモードで自動接続します。"),
+        "다른 PC로 연결…": ("Connect to Another PC…", "別の PC に接続…"),
+        "연결을 누르면 지금 연결이 끊기고 새 PC로 연결합니다.": (
+            "Clicking Connect ends the current connection and connects to the new PC.",
+            "接続を押すと現在の接続を切断し、新しい PC に接続します。"),
         "원격 PC에 연결하는 중입니다…": (
             "Connecting to the remote PC…", "リモート PC に接続しています…"),
         "앱 아이콘 받는 중… %d%% (%d/%d)": (

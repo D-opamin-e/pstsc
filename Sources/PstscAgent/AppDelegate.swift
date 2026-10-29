@@ -338,6 +338,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, RDPSessionDelegate, NS
         menu.addItem(withTitle: L("Windows 시작"), action: #selector(openWindowsStart), keyEquivalent: "")
         menu.addItem(withTitle: mode == .apps ? L("Windows 데스크톱 보기") : L("앱 창 모드로 돌아가기"),
                      action: #selector(toggleMode), keyEquivalent: "")
+        menu.addItem(withTitle: L("다른 PC로 연결…"), action: #selector(connectToAnotherPC), keyEquivalent: "")
         if let windows = windowManager?.appWindows, !windows.isEmpty {
             menu.addItem(.separator())
             for window in windows {
@@ -867,6 +868,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, RDPSessionDelegate, NS
     @objc private func showConnectWindow() {
         connectWindow.showWindow(nil)
         NSApp.activate()
+    }
+
+    /// Dock menu: change the address, account or password and connect to another PC.
+    @objc private func connectToAnotherPC() {
+        connectWindow.prepareForNewConnection(connected: session != nil)
+        showConnectWindow()
     }
 
     @objc private func launchProgramByPath() {
